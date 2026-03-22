@@ -1,6 +1,9 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity.js';
-import { AppointmentReasonEnum, AppointmentStatusEnum } from '../../common/enums/index.js';
+import {
+  AppointmentReasonEnum,
+  AppointmentStatusEnum,
+} from '../../common/enums/index.js';
 import { Paciente } from '../pacientes/paciente.entity.js';
 import { Empleado } from '../personas/empleado.entity.js';
 import { Usuario } from '../auth/usuario.entity.js';

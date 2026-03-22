@@ -4,8 +4,8 @@ import { PatientSexEnum } from '../../common/enums/index.js';
 import { EspecieCatalogo } from '../catalogos/especie-catalogo.entity.js';
 import { RazaCatalogo } from '../catalogos/raza-catalogo.entity.js';
 import { ColorCatalogo } from '../catalogos/color-catalogo.entity.js';
-import { PacienteTutor } from './paciente-tutor.entity.js';
-import { PacienteCondicion } from './paciente-condicion.entity.js';
+import type { PacienteTutor } from './paciente-tutor.entity.js';
+import type { PacienteCondicion } from './paciente-condicion.entity.js';
 
 @Entity({ name: 'pacientes' })
 export class Paciente extends BaseAuditEntity {
@@ -46,13 +46,24 @@ export class Paciente extends BaseAuditEntity {
   @Column({ name: 'fecha_nacimiento', type: 'date', nullable: true })
   fechaNacimiento!: Date | null;
 
-  @Column({ name: 'peso_actual', type: 'numeric', precision: 8, scale: 2, nullable: true })
+  @Column({
+    name: 'peso_actual',
+    type: 'numeric',
+    precision: 8,
+    scale: 2,
+    nullable: true,
+  })
   pesoActual!: number | null;
 
   @Column({ type: 'boolean', default: false })
   esterilizado!: boolean;
 
-  @Column({ name: 'microchip_codigo', type: 'varchar', length: 80, nullable: true })
+  @Column({
+    name: 'microchip_codigo',
+    type: 'varchar',
+    length: 80,
+    nullable: true,
+  })
   microchipCodigo!: string | null;
 
   @Column({ name: 'senas_particulares', type: 'text', nullable: true })
@@ -64,9 +75,9 @@ export class Paciente extends BaseAuditEntity {
   @Column({ name: 'antecedentes_generales', type: 'text', nullable: true })
   antecedentesGenerales!: string | null;
 
-  @OneToMany(() => PacienteTutor, (pt) => pt.paciente)
+  @OneToMany('PacienteTutor', 'paciente')
   tutores!: PacienteTutor[];
 
-  @OneToMany(() => PacienteCondicion, (pc) => pc.paciente)
+  @OneToMany('PacienteCondicion', 'paciente')
   condiciones!: PacienteCondicion[];
 }

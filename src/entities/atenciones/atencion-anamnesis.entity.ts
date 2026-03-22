@@ -8,15 +8,18 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { AppetiteStatusEnum, WaterIntakeStatusEnum } from '../../common/enums/index.js';
-import { Atencion } from './atencion.entity.js';
+import {
+  AppetiteStatusEnum,
+  WaterIntakeStatusEnum,
+} from '../../common/enums/index.js';
+import type { Atencion } from './atencion.entity.js';
 
 @Entity({ name: 'atenciones_anamnesis' })
 export class AtencionAnamnesis {
   @PrimaryColumn({ name: 'atencion_id', type: 'uuid' })
   atencionId!: string;
 
-  @OneToOne(() => Atencion, (a) => a.anamnesis, { onDelete: 'CASCADE' })
+  @OneToOne('Atencion', 'anamnesis', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'atencion_id' })
   atencion!: Atencion;
 
@@ -41,7 +44,11 @@ export class AtencionAnamnesis {
   @Column({ name: 'mascota_en_casa_detalle', type: 'text', nullable: true })
   mascotaEnCasaDetalle!: string | null;
 
-  @Column({ name: 'medicamento_administrado_texto', type: 'text', nullable: true })
+  @Column({
+    name: 'medicamento_administrado_texto',
+    type: 'text',
+    nullable: true,
+  })
   medicamentoAdministradoTexto!: string | null;
 
   @Column({
@@ -74,7 +81,11 @@ export class AtencionAnamnesis {
   @Column({ name: 'orina_texto', type: 'text', nullable: true })
   orinaTexto!: string | null;
 
-  @Column({ name: 'problemas_respiratorios_texto', type: 'text', nullable: true })
+  @Column({
+    name: 'problemas_respiratorios_texto',
+    type: 'text',
+    nullable: true,
+  })
   problemasRespiratoriosTexto!: string | null;
 
   @Column({ name: 'dificultad_caminar_texto', type: 'text', nullable: true })
@@ -92,7 +103,11 @@ export class AtencionAnamnesis {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp without time zone' })
   updatedAt!: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp without time zone', nullable: true })
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'timestamp without time zone',
+    nullable: true,
+  })
   deletedAt!: Date | null;
 
   @Column({ name: 'deleted_by_usuario_id', type: 'uuid', nullable: true })

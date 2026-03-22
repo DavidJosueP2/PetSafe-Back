@@ -6,8 +6,8 @@ import {
   PrimaryColumn,
   CreateDateColumn,
 } from 'typeorm';
-import { Usuario } from './usuario.entity.js';
-import { Role } from './role.entity.js';
+import type { Usuario } from './usuario.entity.js';
+import type { Role } from './role.entity.js';
 
 @Entity({ name: 'usuarios_roles' })
 export class UsuarioRol {
@@ -23,11 +23,11 @@ export class UsuarioRol {
   })
   assignedAt!: Date;
 
-  @ManyToOne(() => Usuario, (u) => u.usuariosRoles, { onDelete: 'CASCADE' })
+  @ManyToOne('Usuario', 'usuariosRoles', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuario_id' })
   usuario!: Usuario;
 
-  @ManyToOne(() => Role, (r) => r.usuariosRoles, { onDelete: 'CASCADE' })
+  @ManyToOne('Role', 'usuariosRoles', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'rol_id' })
   rol!: Role;
 }

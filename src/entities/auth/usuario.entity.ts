@@ -1,8 +1,15 @@
-import { Entity, Column, OneToOne, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  OneToOne,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity.js';
 import { Persona } from '../personas/persona.entity.js';
-import { UsuarioRol } from './usuario-rol.entity.js';
-import { UsuarioRefreshToken } from './usuario-refresh-token.entity.js';
+import type { UsuarioRol } from './usuario-rol.entity.js';
+import type { UsuarioRefreshToken } from './usuario-refresh-token.entity.js';
 
 @Entity({ name: 'usuarios' })
 export class Usuario extends BaseAuditEntity {
@@ -26,9 +33,9 @@ export class Usuario extends BaseAuditEntity {
   })
   ultimoLoginAt!: Date | null;
 
-  @OneToMany(() => UsuarioRol, (ur) => ur.usuario)
+  @OneToMany('UsuarioRol', 'usuario')
   usuariosRoles!: UsuarioRol[];
 
-  @OneToMany(() => UsuarioRefreshToken, (rt) => rt.usuario)
+  @OneToMany('UsuarioRefreshToken', 'usuario')
   refreshTokens!: UsuarioRefreshToken[];
 }

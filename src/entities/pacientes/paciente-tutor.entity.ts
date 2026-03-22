@@ -7,8 +7,8 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { Paciente } from './paciente.entity.js';
-import { Cliente } from '../personas/cliente.entity.js';
+import type { Paciente } from './paciente.entity.js';
+import type { Cliente } from '../personas/cliente.entity.js';
 
 @Entity({ name: 'pacientes_tutores' })
 export class PacienteTutor {
@@ -21,7 +21,12 @@ export class PacienteTutor {
   @Column({ name: 'es_principal', type: 'boolean', default: false })
   esPrincipal!: boolean;
 
-  @Column({ name: 'parentesco_o_relacion', type: 'varchar', length: 80, nullable: true })
+  @Column({
+    name: 'parentesco_o_relacion',
+    type: 'varchar',
+    length: 80,
+    nullable: true,
+  })
   parentescoORelacion!: string | null;
 
   @Column({ type: 'boolean', default: true })
@@ -43,11 +48,11 @@ export class PacienteTutor {
   @Column({ name: 'deleted_by_usuario_id', type: 'uuid', nullable: true })
   deletedByUsuarioId!: string | null;
 
-  @ManyToOne(() => Paciente, (p) => p.tutores, { onDelete: 'CASCADE' })
+  @ManyToOne('Paciente', 'tutores', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'paciente_id' })
   paciente!: Paciente;
 
-  @ManyToOne(() => Cliente, (c) => c.pacientesTutores, { onDelete: 'CASCADE' })
+  @ManyToOne('Cliente', 'pacientesTutores', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'cliente_id' })
   cliente!: Cliente;
 }

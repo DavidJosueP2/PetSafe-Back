@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity.js';
 import { Persona } from './persona.entity.js';
-import { PacienteTutor } from '../pacientes/paciente-tutor.entity.js';
+import type { PacienteTutor } from '../pacientes/paciente-tutor.entity.js';
 
 @Entity({ name: 'clientes' })
 export class Cliente extends BaseAuditEntity {
@@ -15,6 +15,6 @@ export class Cliente extends BaseAuditEntity {
   @Column({ type: 'text', nullable: true })
   observaciones!: string | null;
 
-  @OneToMany(() => PacienteTutor, (pt) => pt.cliente)
+  @OneToMany('PacienteTutor', 'cliente')
   pacientesTutores!: PacienteTutor[];
 }

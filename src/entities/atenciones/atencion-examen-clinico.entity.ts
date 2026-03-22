@@ -8,22 +8,37 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { MucosaStatusEnum, HydrationStatusEnum } from '../../common/enums/index.js';
-import { Atencion } from './atencion.entity.js';
+import {
+  MucosaStatusEnum,
+  HydrationStatusEnum,
+} from '../../common/enums/index.js';
+import type { Atencion } from './atencion.entity.js';
 
 @Entity({ name: 'atenciones_examen_clinico' })
 export class AtencionExamenClinico {
   @PrimaryColumn({ name: 'atencion_id', type: 'uuid' })
   atencionId!: string;
 
-  @OneToOne(() => Atencion, (a) => a.examenClinico, { onDelete: 'CASCADE' })
+  @OneToOne('Atencion', 'examenClinico', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'atencion_id' })
   atencion!: Atencion;
 
-  @Column({ name: 'peso_kg', type: 'numeric', precision: 8, scale: 2, nullable: true })
+  @Column({
+    name: 'peso_kg',
+    type: 'numeric',
+    precision: 8,
+    scale: 2,
+    nullable: true,
+  })
   pesoKg!: number | null;
 
-  @Column({ name: 'temperatura_c', type: 'numeric', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'temperatura_c',
+    type: 'numeric',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   temperaturaC!: number | null;
 
   @Column({ type: 'integer', nullable: true })
@@ -43,7 +58,12 @@ export class AtencionExamenClinico {
   })
   mucosas!: MucosaStatusEnum | null;
 
-  @Column({ name: 'ganglios_linfaticos', type: 'varchar', length: 120, nullable: true })
+  @Column({
+    name: 'ganglios_linfaticos',
+    type: 'varchar',
+    length: 120,
+    nullable: true,
+  })
   gangliosLinfaticos!: string | null;
 
   @Column({
@@ -69,7 +89,11 @@ export class AtencionExamenClinico {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp without time zone' })
   updatedAt!: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp without time zone', nullable: true })
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'timestamp without time zone',
+    nullable: true,
+  })
   deletedAt!: Date | null;
 
   @Column({ name: 'deleted_by_usuario_id', type: 'uuid', nullable: true })
