@@ -1,6 +1,10 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity.js';
-import { MediaOwnerTypeEnum, MediaTypeEnum, StorageProviderEnum } from '../../common/enums/index.js';
+import {
+  MediaOwnerTypeEnum,
+  MediaTypeEnum,
+  StorageProviderEnum,
+} from '../../common/enums/index.js';
 import { Usuario } from '../auth/usuario.entity.js';
 
 @Entity({ name: 'archivos_media' })

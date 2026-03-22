@@ -1,15 +1,13 @@
 import {
-  IsEmail,
   IsNotEmpty,
   IsString,
-  MinLength,
   IsOptional,
   IsEnum,
   IsDateString,
 } from 'class-validator';
 import { GenderEnum } from '../../common/enums/index.js';
 
-export class RegisterDto {
+export class CreateClienteDto {
   @IsNotEmpty()
   @IsString()
   nombres!: string;
@@ -17,14 +15,6 @@ export class RegisterDto {
   @IsNotEmpty()
   @IsString()
   apellidos!: string;
-
-  @IsEmail()
-  correo!: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @MinLength(8)
-  password!: string;
 
   @IsOptional()
   @IsString()
@@ -45,4 +35,8 @@ export class RegisterDto {
   @IsOptional()
   @IsDateString()
   fechaNacimiento?: string;
+
+  @IsOptional()
+  @IsString()
+  observaciones?: string;
 }

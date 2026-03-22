@@ -29,13 +29,23 @@ export class PacientesController {
     return this.pacientesService.create(dto, req.user.userId);
   }
 
-  @Roles(RoleEnum.CLIENTE_APP, RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Roles(
+    RoleEnum.CLIENTE_APP,
+    RoleEnum.ADMIN,
+    RoleEnum.MVZ,
+    RoleEnum.RECEPCIONISTA,
+  )
   @Get()
   findAll(@Request() req: { user: { userId: string } }) {
     return this.pacientesService.findAllByUser(req.user.userId);
   }
 
-  @Roles(RoleEnum.CLIENTE_APP, RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Roles(
+    RoleEnum.CLIENTE_APP,
+    RoleEnum.ADMIN,
+    RoleEnum.MVZ,
+    RoleEnum.RECEPCIONISTA,
+  )
   @Get(':id')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,

@@ -1,13 +1,13 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity.js';
-import { Paciente } from './paciente.entity.js';
+import type { Paciente } from './paciente.entity.js';
 
 @Entity({ name: 'pacientes_condiciones' })
 export class PacienteCondicion extends BaseAuditEntity {
   @Column({ name: 'paciente_id', type: 'uuid' })
   pacienteId!: string;
 
-  @ManyToOne(() => Paciente, (p) => p.condiciones, { onDelete: 'CASCADE' })
+  @ManyToOne('Paciente', 'condiciones', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'paciente_id' })
   paciente!: Paciente;
 

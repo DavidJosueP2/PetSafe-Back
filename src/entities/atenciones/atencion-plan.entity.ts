@@ -8,14 +8,14 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { Atencion } from './atencion.entity.js';
+import type { Atencion } from './atencion.entity.js';
 
 @Entity({ name: 'atenciones_plan' })
 export class AtencionPlan {
   @PrimaryColumn({ name: 'atencion_id', type: 'uuid' })
   atencionId!: string;
 
-  @OneToOne(() => Atencion, (a) => a.plan, { onDelete: 'CASCADE' })
+  @OneToOne('Atencion', 'plan', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'atencion_id' })
   atencion!: Atencion;
 
@@ -40,7 +40,11 @@ export class AtencionPlan {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp without time zone' })
   updatedAt!: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp without time zone', nullable: true })
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'timestamp without time zone',
+    nullable: true,
+  })
   deletedAt!: Date | null;
 
   @Column({ name: 'deleted_by_usuario_id', type: 'uuid', nullable: true })

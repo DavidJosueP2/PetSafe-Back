@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
 import { typeOrmAsyncConfig } from './config/typeorm.config.js';
 import { AuthModule } from './modules/auth.module.js';
 import { PacientesModule } from './modules/pacientes.module.js';
+import { ClientesModule } from './modules/clientes.module.js';
 
 @Module({
   imports: [
@@ -13,8 +12,9 @@ import { PacientesModule } from './modules/pacientes.module.js';
     TypeOrmModule.forRootAsync(typeOrmAsyncConfig),
     AuthModule,
     PacientesModule,
+    ClientesModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

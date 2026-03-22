@@ -1,5 +1,9 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModuleAsyncOptions } from '@nestjs/typeorm';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+
+const currentDir = dirname(fileURLToPath(import.meta.url));
 
 export const typeOrmAsyncConfig: TypeOrmModuleAsyncOptions = {
   imports: [ConfigModule],
@@ -11,7 +15,7 @@ export const typeOrmAsyncConfig: TypeOrmModuleAsyncOptions = {
     username: config.get<string>('DB_USERNAME', 'safepet_user'),
     password: config.get<string>('DB_PASSWORD', 'safepet_secret'),
     database: config.get<string>('DB_NAME', 'safepet_db'),
-    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+    entities: [currentDir + '/../**/*.entity{.ts,.js}'],
     synchronize: false,
     migrationsRun: false,
   }),

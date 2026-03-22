@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity.js';
-import { Atencion } from './atencion.entity.js';
+import type { Atencion } from './atencion.entity.js';
 import { VacunaCatalogo } from '../catalogos/vacuna-catalogo.entity.js';
 
 @Entity({ name: 'vacunaciones_evento' })
@@ -8,7 +8,7 @@ export class VacunacionEvento extends BaseAuditEntity {
   @Column({ name: 'atencion_id', type: 'uuid' })
   atencionId!: string;
 
-  @ManyToOne(() => Atencion, (a) => a.vacunaciones, { onDelete: 'CASCADE' })
+  @ManyToOne('Atencion', 'vacunaciones', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'atencion_id' })
   atencion!: Atencion;
 

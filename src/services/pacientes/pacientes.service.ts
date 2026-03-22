@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 
@@ -76,10 +73,22 @@ export class PacientesService {
   async findAllByUser(userId: string) {
     const pacientes = await this.pacienteRepo
       .createQueryBuilder('p')
-      .innerJoin('pacientes_tutores', 'pt', 'pt.paciente_id = p.id AND pt.deleted_at IS NULL')
-      .innerJoin('clientes', 'c', 'c.id = pt.cliente_id AND c.deleted_at IS NULL')
+      .innerJoin(
+        'pacientes_tutores',
+        'pt',
+        'pt.paciente_id = p.id AND pt.deleted_at IS NULL',
+      )
+      .innerJoin(
+        'clientes',
+        'c',
+        'c.id = pt.cliente_id AND c.deleted_at IS NULL',
+      )
       .innerJoin('personas', 'per', 'per.id = c.persona_id')
-      .innerJoin('usuarios', 'u', 'u.persona_id = per.id AND u.deleted_at IS NULL')
+      .innerJoin(
+        'usuarios',
+        'u',
+        'u.persona_id = per.id AND u.deleted_at IS NULL',
+      )
       .leftJoinAndSelect('p.especie', 'especie')
       .leftJoinAndSelect('p.raza', 'raza')
       .leftJoinAndSelect('p.color', 'color')
@@ -100,20 +109,34 @@ export class PacientesService {
     userId: string,
     manager?: any,
   ) {
-    const repo = manager
-      ? manager.getRepository(Paciente)
-      : this.pacienteRepo;
+    const repo = manager ? manager.getRepository(Paciente) : this.pacienteRepo;
 
     const paciente = await repo
       .createQueryBuilder('p')
-      .innerJoin('pacientes_tutores', 'pt', 'pt.paciente_id = p.id AND pt.deleted_at IS NULL')
-      .innerJoin('clientes', 'c', 'c.id = pt.cliente_id AND c.deleted_at IS NULL')
+      .innerJoin(
+        'pacientes_tutores',
+        'pt',
+        'pt.paciente_id = p.id AND pt.deleted_at IS NULL',
+      )
+      .innerJoin(
+        'clientes',
+        'c',
+        'c.id = pt.cliente_id AND c.deleted_at IS NULL',
+      )
       .innerJoin('personas', 'per', 'per.id = c.persona_id')
-      .innerJoin('usuarios', 'u', 'u.persona_id = per.id AND u.deleted_at IS NULL')
+      .innerJoin(
+        'usuarios',
+        'u',
+        'u.persona_id = per.id AND u.deleted_at IS NULL',
+      )
       .leftJoinAndSelect('p.especie', 'especie')
       .leftJoinAndSelect('p.raza', 'raza')
       .leftJoinAndSelect('p.color', 'color')
-      .leftJoinAndSelect('p.condiciones', 'condiciones', 'condiciones.deleted_at IS NULL')
+      .leftJoinAndSelect(
+        'p.condiciones',
+        'condiciones',
+        'condiciones.deleted_at IS NULL',
+      )
       .where('p.id = :pacienteId', { pacienteId })
       .andWhere('u.id = :userId', { userId })
       .andWhere('p.deleted_at IS NULL')

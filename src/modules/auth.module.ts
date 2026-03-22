@@ -40,6 +40,12 @@ import { Cliente } from '../entities/personas/cliente.entity.js';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RolesGuard],
-  exports: [AuthService, JwtStrategy, RolesGuard, PassportModule, TypeOrmModule],
+  exports: [
+    AuthService,
+    JwtStrategy,
+    RolesGuard,
+    PassportModule,
+    TypeOrmModule,
+  ],
 })
 export class AuthModule {}

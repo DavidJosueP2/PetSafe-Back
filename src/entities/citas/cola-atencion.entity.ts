@@ -1,6 +1,9 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity.js';
-import { QueueEntryTypeEnum, QueueStatusEnum } from '../../common/enums/index.js';
+import {
+  QueueEntryTypeEnum,
+  QueueStatusEnum,
+} from '../../common/enums/index.js';
 import { Cita } from './cita.entity.js';
 import { Paciente } from '../pacientes/paciente.entity.js';
 import { Empleado } from '../personas/empleado.entity.js';
@@ -42,7 +45,11 @@ export class ColaAtencion extends BaseAuditEntity {
   @Column({ name: 'hora_llegada', type: 'timestamp without time zone' })
   horaLlegada!: Date;
 
-  @Column({ name: 'hora_programada', type: 'time without time zone', nullable: true })
+  @Column({
+    name: 'hora_programada',
+    type: 'time without time zone',
+    nullable: true,
+  })
   horaProgramada!: string | null;
 
   @Column({

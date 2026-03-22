@@ -29,7 +29,12 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
+  @Roles(
+    RoleEnum.ADMIN,
+    RoleEnum.MVZ,
+    RoleEnum.RECEPCIONISTA,
+    RoleEnum.CLIENTE_APP,
+  )
   @Get('profile')
   getProfile(@Request() req: { user: { userId: string } }) {
     return this.authService.getProfile(req.user.userId);
