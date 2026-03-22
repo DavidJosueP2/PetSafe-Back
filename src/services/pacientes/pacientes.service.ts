@@ -1,11 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { paginate, PaginateQuery, PaginateConfig } from 'nestjs-paginate';
 
 import { Paciente } from '../../entities/pacientes/paciente.entity.js';
 import { PacienteTutor } from '../../entities/pacientes/paciente-tutor.entity.js';
+import { PacienteCondicion } from '../../entities/pacientes/paciente-condicion.entity.js';
 import { Cliente } from '../../entities/personas/cliente.entity.js';
 import { CreatePacienteDto } from '../../dto/pacientes/create-paciente.dto.js';
+import { UpdatePacienteDto } from '../../dto/pacientes/update-paciente.dto.js';
+import { CreateCondicionDto } from '../../dto/pacientes/create-condicion.dto.js';
+
+const PAGINATE_CONFIG: PaginateConfig<Paciente> = {
+  sortableColumns: ['id', 'nombre', 'codigo', 'createdAt'],
+  defaultSortBy: [['nombre', 'ASC']],
+  searchableColumns: ['nombre', 'codigo', 'microchipCodigo'],
+  relations: ['especie', 'raza', 'color'],
+  maxLimit: 50,
+  defaultLimit: 20,
+};
 
 @Injectable()
 export class PacientesService {
@@ -14,30 +27,86 @@ export class PacientesService {
     private readonly pacienteRepo: Repository<Paciente>,
     @InjectRepository(PacienteTutor)
     private readonly pacienteTutorRepo: Repository<PacienteTutor>,
+    @InjectRepository(PacienteCondicion)
+    private readonly condicionRepo: Repository<PacienteCondicion>,
     @InjectRepository(Cliente)
     private readonly clienteRepo: Repository<Cliente>,
     private readonly dataSource: DataSource,
   ) {}
 
+  // ── Helpers ─────────────────────────────────────────
+
+  /** Resolves the client ID from a user ID (user→persona→cliente) */
+  private async resolveClienteId(
+    userId: string,
+    manager?: any,
+  ): Promise<string> {
+    const repo = manager
+      ? manager.getRepository(Cliente)
+      : this.clienteRepo;
+
+    const cliente = await repo
+      .createQueryBuilder('c')
+      .innerJoin('personas', 'p', 'p.id = c.persona_id')
+      .innerJoin('usuarios', 'u', 'u.persona_id = p.id')
+      .where('u.id = :userId', { userId })
+      .andWhere('c.deleted_at IS NULL')
+      .select('c.id')
+      .getOne();
+
+    if (!cliente) {
+      throw new NotFoundException(
+        'No se encontró perfil de cliente para este usuario',
+      );
+    }
+    return cliente.id;
+  }
+
+  /** Verifies the user owns the patient, returns the Paciente */
+  private async verifyOwnership(
+    pacienteId: string,
+    userId: string,
+    manager?: any,
+  ): Promise<Paciente> {
+    const repo = manager
+      ? manager.getRepository(Paciente)
+      : this.pacienteRepo;
+
+    const paciente = await repo
+      .createQueryBuilder('p')
+      .innerJoin(
+        'pacientes_tutores',
+        'pt',
+        'pt.paciente_id = p.id AND pt.deleted_at IS NULL',
+      )
+      .innerJoin(
+        'clientes',
+        'c',
+        'c.id = pt.cliente_id AND c.deleted_at IS NULL',
+      )
+      .innerJoin('personas', 'per', 'per.id = c.persona_id')
+      .innerJoin(
+        'usuarios',
+        'u',
+        'u.persona_id = per.id AND u.deleted_at IS NULL',
+      )
+      .where('p.id = :pacienteId', { pacienteId })
+      .andWhere('u.id = :userId', { userId })
+      .andWhere('p.deleted_at IS NULL')
+      .getOne();
+
+    if (!paciente) {
+      throw new NotFoundException('Paciente no encontrado');
+    }
+    return paciente;
+  }
+
+  // ── CREATE ──────────────────────────────────────────
+
   async create(dto: CreatePacienteDto, userId: string) {
     return this.dataSource.transaction(async (manager) => {
-      // Find client profile with pessimistic lock to prevent concurrent inserts
-      const cliente = await manager
-        .createQueryBuilder(Cliente, 'c')
-        .setLock('pessimistic_read')
-        .innerJoin('personas', 'p', 'p.id = c.persona_id')
-        .innerJoin('usuarios', 'u', 'u.persona_id = p.id')
-        .where('u.id = :userId', { userId })
-        .andWhere('c.deleted_at IS NULL')
-        .getOne();
+      const clienteId = await this.resolveClienteId(userId, manager);
 
-      if (!cliente) {
-        throw new NotFoundException(
-          'No se encontró perfil de cliente para este usuario',
-        );
-      }
-
-      // 1. Create paciente
       const paciente = manager.create(Paciente, {
         nombre: dto.nombre,
         especieId: dto.especieId,
@@ -54,24 +123,24 @@ export class PacientesService {
         alergiasGenerales: dto.alergiasGenerales ?? null,
         antecedentesGenerales: dto.antecedentesGenerales ?? null,
       });
-      const savedPaciente = await manager.save(Paciente, paciente);
+      const saved = await manager.save(Paciente, paciente);
 
-      // 2. Link as primary tutor
       const tutor = manager.create(PacienteTutor, {
-        pacienteId: savedPaciente.id,
-        clienteId: cliente.id,
+        pacienteId: saved.id,
+        clienteId,
         esPrincipal: true,
         parentescoORelacion: 'Dueño',
       });
       await manager.save(PacienteTutor, tutor);
 
-      // 3. Fetch full entity with relations for response
-      return this.findOneInternal(savedPaciente.id, userId, manager);
+      return this.findOneInternal(saved.id, userId, manager);
     });
   }
 
-  async findAllByUser(userId: string) {
-    const pacientes = await this.pacienteRepo
+  // ── READ ────────────────────────────────────────────
+
+  async findAllByUser(query: PaginateQuery, userId: string) {
+    const qb = this.pacienteRepo
       .createQueryBuilder('p')
       .innerJoin(
         'pacientes_tutores',
@@ -93,16 +162,107 @@ export class PacientesService {
       .leftJoinAndSelect('p.raza', 'raza')
       .leftJoinAndSelect('p.color', 'color')
       .where('u.id = :userId', { userId })
-      .andWhere('p.deleted_at IS NULL')
-      .orderBy('p.nombre', 'ASC')
-      .getMany();
+      .andWhere('p.deleted_at IS NULL');
 
-    return pacientes.map((p) => this.toResponse(p));
+    return paginate(query, qb, PAGINATE_CONFIG);
   }
 
   async findOne(pacienteId: string, userId: string) {
     return this.findOneInternal(pacienteId, userId);
   }
+
+  // ── UPDATE ──────────────────────────────────────────
+
+  async update(pacienteId: string, dto: UpdatePacienteDto, userId: string) {
+    return this.dataSource.transaction(async (manager) => {
+      await this.verifyOwnership(pacienteId, userId, manager);
+
+      const updateData: Partial<Paciente> = {};
+      if (dto.nombre !== undefined) updateData.nombre = dto.nombre;
+      if (dto.especieId !== undefined) updateData.especieId = dto.especieId;
+      if (dto.sexo !== undefined) updateData.sexo = dto.sexo;
+      if (dto.razaId !== undefined) updateData.razaId = dto.razaId ?? null;
+      if (dto.colorId !== undefined) updateData.colorId = dto.colorId ?? null;
+      if (dto.fechaNacimiento !== undefined) {
+        updateData.fechaNacimiento = dto.fechaNacimiento
+          ? new Date(dto.fechaNacimiento)
+          : null;
+      }
+      if (dto.pesoActual !== undefined)
+        updateData.pesoActual = dto.pesoActual ?? null;
+      if (dto.esterilizado !== undefined)
+        updateData.esterilizado = dto.esterilizado;
+      if (dto.microchipCodigo !== undefined)
+        updateData.microchipCodigo = dto.microchipCodigo ?? null;
+      if (dto.senasParticulares !== undefined)
+        updateData.senasParticulares = dto.senasParticulares ?? null;
+      if (dto.alergiasGenerales !== undefined)
+        updateData.alergiasGenerales = dto.alergiasGenerales ?? null;
+      if (dto.antecedentesGenerales !== undefined)
+        updateData.antecedentesGenerales = dto.antecedentesGenerales ?? null;
+
+      await manager.update(Paciente, pacienteId, updateData);
+
+      return this.findOneInternal(pacienteId, userId, manager);
+    });
+  }
+
+  // ── SOFT DELETE ─────────────────────────────────────
+
+  async softDelete(pacienteId: string, userId: string) {
+    await this.verifyOwnership(pacienteId, userId);
+    await this.pacienteRepo.softDelete(pacienteId);
+    return { message: 'Paciente eliminado correctamente' };
+  }
+
+  // ── CONDICIONES ─────────────────────────────────────
+
+  async addCondicion(
+    pacienteId: string,
+    dto: CreateCondicionDto,
+    userId: string,
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      await this.verifyOwnership(pacienteId, userId, manager);
+
+      const condicion = manager.create(PacienteCondicion, {
+        pacienteId,
+        tipo: dto.tipo,
+        nombre: dto.nombre,
+        descripcion: dto.descripcion ?? null,
+        activa: dto.activa ?? true,
+      });
+      const saved = await manager.save(PacienteCondicion, condicion);
+
+      return {
+        id: saved.id,
+        tipo: saved.tipo,
+        nombre: saved.nombre,
+        descripcion: saved.descripcion,
+        activa: saved.activa,
+      };
+    });
+  }
+
+  async removeCondicion(
+    pacienteId: string,
+    condicionId: string,
+    userId: string,
+  ) {
+    await this.verifyOwnership(pacienteId, userId);
+
+    const condicion = await this.condicionRepo.findOne({
+      where: { id: condicionId, pacienteId },
+    });
+    if (!condicion) {
+      throw new NotFoundException('Condición no encontrada');
+    }
+
+    await this.condicionRepo.softDelete(condicionId);
+    return { message: 'Condición eliminada correctamente' };
+  }
+
+  // ── Private ─────────────────────────────────────────
 
   private async findOneInternal(
     pacienteId: string,

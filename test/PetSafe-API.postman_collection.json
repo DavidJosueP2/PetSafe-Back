@@ -1,0 +1,638 @@
+{
+  "info": {
+    "name": "PetSafe API",
+    "description": "Colección completa para probar la API de PetSafe — Auth, Catálogos (Especies, Razas, Colores), Pacientes y Condiciones.\n\nIncluye casos de éxito y fallas (validación, duplicados, no encontrado, no autorizado).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "token", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "especieId", "value": "" },
+    { "key": "razaId", "value": "" },
+    { "key": "colorId", "value": "" },
+    { "key": "pacienteId", "value": "" },
+    { "key": "condicionId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "✅ Register — nuevo usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('token', body.access_token);",
+                  "  pm.test('Registro exitoso', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Juan\",\n  \"apellidos\": \"Pérez\",\n  \"correo\": \"juan@test.com\",\n  \"password\": \"Test1234!\",\n  \"telefono\": \"0991234567\",\n  \"genero\": \"M\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "❌ Register — correo duplicado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Juan\",\n  \"apellidos\": \"Pérez\",\n  \"correo\": \"juan@test.com\",\n  \"password\": \"Test1234!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "❌ Register — validación (sin password)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Test\",\n  \"apellidos\": \"User\",\n  \"correo\": \"nopass@test.com\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "❌ Register — validación (correo inválido)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Test\",\n  \"apellidos\": \"User\",\n  \"correo\": \"nocorreo\",\n  \"password\": \"Test1234!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "✅ Login — admin (seed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('adminToken', body.access_token);",
+                  "  pm.test('Login admin exitoso', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@safepet.com\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "✅ Login — cliente (seed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('token', body.access_token);",
+                  "  pm.test('Login cliente exitoso', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"cliente@safepet.com\",\n  \"password\": \"Cliente123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "❌ Login — credenciales inválidas",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@safepet.com\",\n  \"password\": \"wrongpassword\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "❌ Login — usuario no existe",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"noexiste@test.com\",\n  \"password\": \"Test1234!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "✅ Profile — con token",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/profile", "host": ["{{baseUrl}}"], "path": ["auth", "profile"] }
+          }
+        },
+        {
+          "name": "❌ Profile — sin token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/profile", "host": ["{{baseUrl}}"], "path": ["auth", "profile"] }
+          }
+        },
+        {
+          "name": "❌ Profile — token inválido (401)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer invalid.token.here" }],
+            "url": { "raw": "{{baseUrl}}/auth/profile", "host": ["{{baseUrl}}"], "path": ["auth", "profile"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐕 Especies",
+      "item": [
+        {
+          "name": "✅ Listar especies (paginado)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/especies?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["especies"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }] }
+          }
+        },
+        {
+          "name": "✅ Listar especies con búsqueda",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/especies?search=perro", "host": ["{{baseUrl}}"], "path": ["especies"], "query": [{ "key": "search", "value": "perro" }] }
+          }
+        },
+        {
+          "name": "✅ Crear especie (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('especieId', body.id);",
+                  "  pm.test('Especie creada', () => pm.expect(body.nombre).to.exist);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Reptil\",\n  \"descripcion\": \"Reptiles domésticos\"\n}" },
+            "url": { "raw": "{{baseUrl}}/especies", "host": ["{{baseUrl}}"], "path": ["especies"] }
+          }
+        },
+        {
+          "name": "❌ Crear especie — duplicada",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Reptil\"\n}" },
+            "url": { "raw": "{{baseUrl}}/especies", "host": ["{{baseUrl}}"], "path": ["especies"] }
+          }
+        },
+        {
+          "name": "❌ Crear especie — sin permiso (cliente)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Ave\"\n}" },
+            "url": { "raw": "{{baseUrl}}/especies", "host": ["{{baseUrl}}"], "path": ["especies"] }
+          }
+        },
+        {
+          "name": "✅ Ver especie por ID (con razas)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/especies/{{especieId}}", "host": ["{{baseUrl}}"], "path": ["especies", "{{especieId}}"] }
+          }
+        },
+        {
+          "name": "✅ Actualizar especie (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"descripcion\": \"Reptiles y anfibios\"\n}" },
+            "url": { "raw": "{{baseUrl}}/especies/{{especieId}}", "host": ["{{baseUrl}}"], "path": ["especies", "{{especieId}}"] }
+          }
+        },
+        {
+          "name": "❌ Ver especie — no existe",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/especies/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["especies", "00000000-0000-0000-0000-000000000000"] }
+          }
+        },
+        {
+          "name": "✅ Eliminar especie (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/especies/{{especieId}}", "host": ["{{baseUrl}}"], "path": ["especies", "{{especieId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐩 Razas",
+      "item": [
+        {
+          "name": "✅ Listar razas (paginado)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/razas?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["razas"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "✅ Listar razas — filtrar por especie",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/razas?filter.especieId=$eq:{{especieId}}", "host": ["{{baseUrl}}"], "path": ["razas"], "query": [{ "key": "filter.especieId", "value": "$eq:{{especieId}}" }] }
+          }
+        },
+        {
+          "name": "✅ Crear raza (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('razaId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"especieId\": \"{{especieId}}\",\n  \"nombre\": \"Iguana Verde\",\n  \"descripcion\": \"Iguana iguana\"\n}" },
+            "url": { "raw": "{{baseUrl}}/razas", "host": ["{{baseUrl}}"], "path": ["razas"] }
+          }
+        },
+        {
+          "name": "❌ Crear raza — especie no existe",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"especieId\": \"00000000-0000-0000-0000-000000000000\",\n  \"nombre\": \"Fantasma\"\n}" },
+            "url": { "raw": "{{baseUrl}}/razas", "host": ["{{baseUrl}}"], "path": ["razas"] }
+          }
+        },
+        {
+          "name": "❌ Crear raza — duplicada",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"especieId\": \"{{especieId}}\",\n  \"nombre\": \"Iguana Verde\"\n}" },
+            "url": { "raw": "{{baseUrl}}/razas", "host": ["{{baseUrl}}"], "path": ["razas"] }
+          }
+        },
+        {
+          "name": "✅ Actualizar raza (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"descripcion\": \"Iguana iguana actualizada\"\n}" },
+            "url": { "raw": "{{baseUrl}}/razas/{{razaId}}", "host": ["{{baseUrl}}"], "path": ["razas", "{{razaId}}"] }
+          }
+        },
+        {
+          "name": "✅ Eliminar raza (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/razas/{{razaId}}", "host": ["{{baseUrl}}"], "path": ["razas", "{{razaId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎨 Colores",
+      "item": [
+        {
+          "name": "✅ Listar colores (paginado)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/colores?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["colores"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }] }
+          }
+        },
+        {
+          "name": "✅ Crear color (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('colorId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Atigrado\"\n}" },
+            "url": { "raw": "{{baseUrl}}/colores", "host": ["{{baseUrl}}"], "path": ["colores"] }
+          }
+        },
+        {
+          "name": "❌ Crear color — duplicado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Atigrado\"\n}" },
+            "url": { "raw": "{{baseUrl}}/colores", "host": ["{{baseUrl}}"], "path": ["colores"] }
+          }
+        },
+        {
+          "name": "❌ Crear color — validación (vacío)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{baseUrl}}/colores", "host": ["{{baseUrl}}"], "path": ["colores"] }
+          }
+        },
+        {
+          "name": "✅ Ver color por ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/colores/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["colores", "{{colorId}}"] }
+          }
+        },
+        {
+          "name": "✅ Actualizar color (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Atigrado oscuro\"\n}" },
+            "url": { "raw": "{{baseUrl}}/colores/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["colores", "{{colorId}}"] }
+          }
+        },
+        {
+          "name": "✅ Eliminar color (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/colores/{{colorId}}", "host": ["{{baseUrl}}"], "path": ["colores", "{{colorId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐾 Pacientes",
+      "item": [
+        {
+          "name": "✅ Crear paciente (cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('pacienteId', body.id);",
+                  "  pm.test('Paciente creado', () => pm.expect(body.nombre).to.eql('Luna'));",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Primero obtiene una especie del seed para usarla",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                  "const token = pm.collectionVariables.get('token');",
+                  "pm.sendRequest({",
+                  "  url: baseUrl + '/especies?limit=1',",
+                  "  method: 'GET',",
+                  "  header: { 'Authorization': 'Bearer ' + token }",
+                  "}, (err, res) => {",
+                  "  if (!err && res.code === 200) {",
+                  "    const data = res.json();",
+                  "    if (data.data && data.data.length > 0) {",
+                  "      pm.collectionVariables.set('especieId', data.data[0].id);",
+                  "    }",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Luna\",\n  \"especieId\": \"{{especieId}}\",\n  \"sexo\": \"HEMBRA\",\n  \"fechaNacimiento\": \"2023-05-15\",\n  \"pesoActual\": 4.5,\n  \"esterilizado\": true,\n  \"senasParticulares\": \"Mancha blanca en el pecho\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/pacientes", "host": ["{{baseUrl}}"], "path": ["pacientes"] }
+          }
+        },
+        {
+          "name": "❌ Crear paciente — validación (sin nombre)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"especieId\": \"{{especieId}}\",\n  \"sexo\": \"HEMBRA\"\n}" },
+            "url": { "raw": "{{baseUrl}}/pacientes", "host": ["{{baseUrl}}"], "path": ["pacientes"] }
+          }
+        },
+        {
+          "name": "❌ Crear paciente — sexo inválido",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Rex\",\n  \"especieId\": \"{{especieId}}\",\n  \"sexo\": \"INVALIDO\"\n}" },
+            "url": { "raw": "{{baseUrl}}/pacientes", "host": ["{{baseUrl}}"], "path": ["pacientes"] }
+          }
+        },
+        {
+          "name": "❌ Crear paciente — especie no existe",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Rex\",\n  \"especieId\": \"00000000-0000-0000-0000-000000000000\",\n  \"sexo\": \"MACHO\"\n}" },
+            "url": { "raw": "{{baseUrl}}/pacientes", "host": ["{{baseUrl}}"], "path": ["pacientes"] }
+          }
+        },
+        {
+          "name": "✅ Listar pacientes (paginado)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["pacientes"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }] }
+          }
+        },
+        {
+          "name": "✅ Listar pacientes con búsqueda",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes?search=Luna", "host": ["{{baseUrl}}"], "path": ["pacientes"], "query": [{ "key": "search", "value": "Luna" }] }
+          }
+        },
+        {
+          "name": "✅ Ver paciente por ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}"] }
+          }
+        },
+        {
+          "name": "❌ Ver paciente — no existe",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["pacientes", "00000000-0000-0000-0000-000000000000"] }
+          }
+        },
+        {
+          "name": "✅ Actualizar paciente",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"pesoActual\": 5.2,\n  \"senasParticulares\": \"Mancha blanca en el pecho, cicatriz en pata izquierda\"\n}" },
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}"] }
+          }
+        },
+        {
+          "name": "❌ Actualizar paciente — UUID inválido",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Rex\"\n}" },
+            "url": { "raw": "{{baseUrl}}/pacientes/no-es-uuid", "host": ["{{baseUrl}}"], "path": ["pacientes", "no-es-uuid"] }
+          }
+        },
+        {
+          "name": "✅ Agregar condición al paciente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('condicionId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"tipo\": \"ALERGIA\",\n  \"nombre\": \"Alergia al pollo\",\n  \"descripcion\": \"Reacción cutánea con alimentos con pollo\",\n  \"activa\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}/condiciones", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}", "condiciones"] }
+          }
+        },
+        {
+          "name": "❌ Agregar condición — validación (sin tipo)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Sin tipo\"\n}" },
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}/condiciones", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}", "condiciones"] }
+          }
+        },
+        {
+          "name": "✅ Ver paciente con condiciones",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}"] }
+          }
+        },
+        {
+          "name": "✅ Eliminar condición",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}/condiciones/{{condicionId}}", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}", "condiciones", "{{condicionId}}"] }
+          }
+        },
+        {
+          "name": "❌ Eliminar condición — no existe",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}/condiciones/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}", "condiciones", "00000000-0000-0000-0000-000000000000"] }
+          }
+        },
+        {
+          "name": "✅ Eliminar paciente (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}"] }
+          }
+        },
+        {
+          "name": "❌ Ver paciente eliminado — no existe",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/pacientes/{{pacienteId}}", "host": ["{{baseUrl}}"], "path": ["pacientes", "{{pacienteId}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}
