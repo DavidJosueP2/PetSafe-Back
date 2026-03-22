@@ -47,7 +47,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     } else if (exception instanceof QueryFailedError) {
       // Handle DB errors (unique constraint, FK violations, etc.)
-      const pgError = exception as QueryFailedError & { code?: string; detail?: string };
+      const pgError = exception as QueryFailedError & {
+        code?: string;
+        detail?: string;
+      };
 
       if (pgError.code === '23505') {
         // unique_violation
