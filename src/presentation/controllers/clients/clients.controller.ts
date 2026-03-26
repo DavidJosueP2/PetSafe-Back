@@ -12,7 +12,9 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { ClientsService } from '../../../application/services/clients/clients.service.js';
+import { ClientAccessService } from '../../../application/services/clients/client-access.service.js';
 import { CreateClientDto } from '../../dto/clients/create-client.dto.js';
+import { ClientAccessDto } from '../../dto/clients/client-access.dto.js';
 import { UpdateClientDto } from '../../dto/clients/update-client.dto.js';
 import { ListClientsQueryDto } from '../../dto/clients/list-clients-query.dto.js';
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
@@ -23,12 +25,24 @@ import { RoleEnum } from '../../../domain/enums/index.js';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('clients')
 export class ClientsController {
-  constructor(private readonly clientsService: ClientsService) {}
+  constructor(
+    private readonly clientsService: ClientsService,
+    private readonly clientAccessService: ClientAccessService,
+  ) {}
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Post()
   create(@Body() dto: CreateClientDto) {
     return this.clientsService.create(dto);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Post(':id/access')
+  createAccess(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ClientAccessDto,
+  ) {
+    return this.clientAccessService.createAccessForExistingClient(id, dto);
   }
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)

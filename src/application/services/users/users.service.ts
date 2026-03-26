@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 import { User } from '../../../domain/entities/auth/user.entity.js';
 import { Person } from '../../../domain/entities/persons/person.entity.js';
@@ -16,6 +17,7 @@ import { RegisterDto } from '../../../presentation/dto/auth/register.dto.js';
 import { UpdateProfileDto } from '../../../presentation/dto/auth/update-profile.dto.js';
 import { UserProfileResponseDto } from '../../../presentation/dto/users/user-response.dto.js';
 import { UserMapper } from '../../mappers/user.mapper.js';
+import { TemporaryAccessService } from './temporary-access.service.js';
 
 @Injectable()
 export class UsersService {
@@ -24,10 +26,9 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Person)
     private readonly personRepository: Repository<Person>,
-    @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>,
     @InjectRepository(UserRole)
     private readonly userRoleRepository: Repository<UserRole>,
+    private readonly temporaryAccessService: TemporaryAccessService,
   ) {}
 
   async createUserWithRole(
@@ -36,17 +37,6 @@ export class UsersService {
     roleName: RoleEnum,
     manager: EntityManager,
   ): Promise<{ savedUser: User; savedPerson: Person; savedUserRole: UserRole | null }> {
-    const existingUser = await manager
-      .createQueryBuilder(User, 'u')
-      .setLock('pessimistic_write')
-      .where('u.email = :correo', { correo: dto.email })
-      .andWhere('u.deletedAt IS NULL')
-      .getOne();
-
-    if (existingUser) {
-      throw new ConflictException('El correo electrónico ya está registrado');
-    }
-
     const person = manager.create(Person, {
       personType: personType,
       firstName: dto.firstName,
@@ -59,12 +49,32 @@ export class UsersService {
     });
     const savedPerson = await manager.save(Person, person);
 
+    const { savedUser, savedUserRole } = await this.createUserForExistingPerson(
+      savedPerson.id,
+      dto.email,
+      dto.password,
+      roleName,
+      manager,
+    );
+
+    return { savedUser, savedPerson, savedUserRole };
+  }
+
+  async createUserForExistingPerson(
+    personId: number,
+    email: string,
+    password: string,
+    roleName: RoleEnum,
+    manager: EntityManager,
+  ): Promise<{ savedUser: User; savedUserRole: UserRole | null }> {
+    await this.ensureEmailAvailable(email, manager);
+
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(dto.password, salt);
+    const passwordHash = await bcrypt.hash(password, salt);
 
     const user = manager.create(User, {
-      personId: savedPerson.id,
-      email: dto.email,
+      personId,
+      email,
       passwordHash,
     });
     const savedUser = await manager.save(User, user);
@@ -80,13 +90,48 @@ export class UsersService {
         roleId: targetRole.id,
       });
       savedUserRole = await manager.save(UserRole, userRole);
-      
+
       savedUser.userRoles = savedUser.userRoles || [];
       savedUser.userRoles.push(userRole);
-      userRole.role = targetRole; 
+      userRole.role = targetRole;
     }
 
-    return { savedUser, savedPerson, savedUserRole };
+    return { savedUser, savedUserRole };
+  }
+
+  async provisionClientAccess(
+    personId: number,
+    email: string,
+    manager: EntityManager,
+  ): Promise<{
+    savedUser: User;
+    temporaryPassword: string;
+    temporaryPasswordExpiresAt: Date;
+    expiresInHours: number;
+  }> {
+    const temporaryPassword = this.generateSecureTemporaryPassword();
+
+    const { savedUser } = await this.createUserForExistingPerson(
+      personId,
+      email,
+      temporaryPassword,
+      RoleEnum.CLIENTE_APP,
+      manager,
+    );
+
+    const temporaryAccess = await this.temporaryAccessService.createForUser(
+      savedUser.id,
+      email,
+      temporaryPassword,
+      manager,
+    );
+
+    return {
+      savedUser,
+      temporaryPassword,
+      temporaryPasswordExpiresAt: temporaryAccess.expiresAt,
+      expiresInHours: temporaryAccess.expiresInHours,
+    };
   }
 
   async findProfile(userId: number): Promise<UserProfileResponseDto> {
@@ -127,5 +172,31 @@ export class UsersService {
     await this.personRepository.save(person);
 
     return { message: 'Perfil actualizado correctamente' };
+  }
+
+  private async ensureEmailAvailable(email: string, manager: EntityManager): Promise<void> {
+    const existingUser = await manager
+      .createQueryBuilder(User, 'u')
+      .setLock('pessimistic_write')
+      .where('u.email = :correo', { correo: email })
+      .andWhere('u.deletedAt IS NULL')
+      .getOne();
+
+    if (existingUser) {
+      throw new ConflictException('El correo electrónico ya está registrado');
+    }
+  }
+
+  private generateSecureTemporaryPassword(length = 16): string {
+    const alphabet =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    const bytes = crypto.randomBytes(length);
+    let password = '';
+
+    for (let i = 0; i < length; i += 1) {
+      password += alphabet[bytes[i] % alphabet.length];
+    }
+
+    return password;
   }
 }

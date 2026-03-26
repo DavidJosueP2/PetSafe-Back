@@ -17,6 +17,8 @@ import { CreateClientDto } from '../../../presentation/dto/clients/create-client
 import { UpdateClientDto } from '../../../presentation/dto/clients/update-client.dto.js';
 import { ListClientsQueryDto } from '../../../presentation/dto/clients/list-clients-query.dto.js';
 import { ClientResponseDto, PaginatedClientsResponseDto } from '../../../presentation/dto/clients/client-response.dto.js';
+import { ClientAccessService } from './client-access.service.js';
+import { ClientMapper } from '../../mappers/client.mapper.js';
 
 @Injectable()
 export class ClientsService {
@@ -30,6 +32,7 @@ export class ClientsService {
     @InjectRepository(PatientTutor)
     private readonly patientTutorRepository: Repository<PatientTutor>,
     private readonly dataSource: DataSource,
+    private readonly clientAccessService: ClientAccessService,
   ) {}
 
   async create(dto: CreateClientDto): Promise<ClientResponseDto> {
@@ -52,8 +55,15 @@ export class ClientsService {
       });
       const savedClient = await manager.save(Client, client);
 
+      savedClient.person = savedPerson;
+      const email = await this.clientAccessService.createAccessIfRequested(
+        savedClient,
+        dto.user,
+        manager,
+      );
+
       const created = await this.findOneInternal(savedClient.id, manager);
-      return this.toResponse(created, null);
+      return ClientMapper.toResponseDto(created, email);
     });
   }
 
@@ -117,7 +127,7 @@ export class ClientsService {
     const { entities, raw } = await qb.skip(offset).take(limit).getRawAndEntities();
 
     const data = entities.map((c, idx) =>
-      this.toResponse(c, (raw[idx] as any)?.email ?? null),
+      ClientMapper.toResponseDto(c, (raw[idx] as any)?.email ?? null),
     );
 
     const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
@@ -163,7 +173,7 @@ export class ClientsService {
       throw new NotFoundException('Cliente no encontrado');
     }
 
-    return this.toResponse(client, (raw[0] as any)?.email ?? null);
+    return ClientMapper.toResponseDto(client, (raw[0] as any)?.email ?? null);
   }
 
   async update(id: number, dto: UpdateClientDto): Promise<ClientResponseDto> {
@@ -193,7 +203,7 @@ export class ClientsService {
 
       const updated = await this.findOneInternal(id, manager);
       const email = await this.getEmailByPersonId(updated.personId, manager);
-      return this.toResponse(updated, email);
+      return ClientMapper.toResponseDto(updated, email);
     });
   }
 
@@ -280,27 +290,5 @@ export class ClientsService {
   private canManageAllClients(roleNames: string[]) {
     const privileged: string[] = [RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA];
     return roleNames.some((r) => privileged.includes(r));
-  }
-
-  private toResponse(c: Client, email?: string | null): ClientResponseDto {
-    return {
-      id: c.id,
-      active: c.isActive,
-      notes: c.notes,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-      email: email ?? null,
-      person: {
-        id: c.person.id,
-        personType: c.person.personType,
-        firstName: c.person.firstName,
-        lastName: c.person.lastName,
-        identification: c.person.documentId,
-        phone: c.person.phone,
-        address: c.person.address,
-        gender: c.person.gender,
-        birthDate: c.person.birthDate,
-      },
-    };
   }
 }

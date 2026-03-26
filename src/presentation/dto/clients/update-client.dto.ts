@@ -1,8 +1,8 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreateClientDto } from './create-client.dto.js';
 import { IsOptional, IsBoolean } from 'class-validator';
+import { ClientDataDto } from './client-data.dto.js';
 
-export class UpdateClientDto extends PartialType(CreateClientDto) {
+export class UpdateClientDto extends PartialType(ClientDataDto) {
   @IsOptional()
   @IsBoolean({ message: 'El estado activo debe ser verdadero o falso.' })
   active?: boolean;

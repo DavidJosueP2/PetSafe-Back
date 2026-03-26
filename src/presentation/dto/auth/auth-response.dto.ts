@@ -5,6 +5,7 @@ export class UserResponseDto {
   firstName!: string;
   lastName!: string;
   isVet!: boolean;
+  requiresPasswordChange!: boolean;
 }
 
 export class AuthResponseDto {

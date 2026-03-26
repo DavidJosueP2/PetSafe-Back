@@ -30,14 +30,13 @@ import { JwtPayload } from '../../../infra/security/strategies/jwt.strategy.js';
 import { NotificationDispatcherService } from '../notifications/notification-dispatcher.service.js';
 import { AuthNotificationContentFactory } from '../notifications/templates/auth-notification-content.factory.js';
 import { UsersService } from '../users/users.service.js';
+import { TemporaryAccessService } from '../users/temporary-access.service.js';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Client)
-    private readonly clientRepository: Repository<Client>,
     @InjectRepository(UserRefreshToken)
     private readonly refreshTokenRepository: Repository<UserRefreshToken>,
     @InjectRepository(UserPasswordResetToken)
@@ -47,7 +46,8 @@ export class AuthService {
     private readonly notificationDispatcher: NotificationDispatcherService,
     private readonly notificationContentFactory: AuthNotificationContentFactory,
     private readonly usersService: UsersService,
-  ) { }
+    private readonly temporaryAccessService: TemporaryAccessService,
+  ) {}
 
   private async generateTokens(user: User, manager?: EntityManager) {
     const roles = user.userRoles?.map((ur) => ur.role.name) || [];
@@ -99,17 +99,13 @@ export class AuthService {
 
       const tokens = await this.generateTokens(savedUser, manager);
 
-      return {
-        ...tokens,
-        user: {
-          id: savedUser.id,
-          email: savedUser.email,
-          roles: savedUser.userRoles?.map((ur) => ur.role.name) || [],
-          firstName: savedPerson.firstName,
-          lastName: savedPerson.lastName,
-          isVet: false,
-        },
-      };
+      savedUser.person = savedPerson;
+      return UserMapper.toAuthResponseDto(
+        savedUser,
+        tokens.accessToken,
+        tokens.refreshToken,
+        false,
+      );
     });
   }
 
@@ -128,23 +124,25 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    const temporaryAccess = await this.temporaryAccessService.getRequirement(user.id);
+    if (temporaryAccess.expired) {
+      throw new UnauthorizedException(
+        'La contraseña temporal ha expirado. Debes solicitar una recuperación manual de contraseña.',
+      );
+    }
+
     await this.userRepository.update(user.id, {
       lastLoginAt: new Date(),
     });
 
     const tokens = await this.generateTokens(user);
 
-    return {
-      ...tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        roles: user.userRoles?.map((ur) => ur.role.name) || [],
-        firstName: user.person.firstName,
-        lastName: user.person.lastName,
-        isVet: false,
-      },
-    };
+    return UserMapper.toAuthResponseDto(
+      user,
+      tokens.accessToken,
+      tokens.refreshToken,
+      temporaryAccess.requiresPasswordChange,
+    );
   }
 
   async updatePassword(userId: number, dto: UpdatePasswordDto) {
@@ -167,9 +165,12 @@ export class AuthService {
     }
 
     const salt = await bcrypt.genSalt(10);
-    user.passwordHash = await bcrypt.hash(dto.newPassword, salt);
 
-    await this.userRepository.save(user);
+    await this.dataSource.transaction(async (manager) => {
+      user.passwordHash = await bcrypt.hash(dto.newPassword, salt);
+      await manager.save(User, user);
+      await this.temporaryAccessService.invalidateForUser(user.id, manager);
+    });
 
     return { message: 'Contraseña actualizada correctamente' };
   }
@@ -190,23 +191,25 @@ export class AuthService {
     entity.revokedAt = new Date();
     await this.refreshTokenRepository.save(entity);
 
+    const temporaryAccess = await this.temporaryAccessService.getRequirement(entity.user.id);
+    if (temporaryAccess.expired) {
+      throw new UnauthorizedException(
+        'La contraseña temporal ha expirado. Debes solicitar una recuperación manual de contraseña.',
+      );
+    }
+
     await this.userRepository.update(entity.user.id, {
       lastLoginAt: new Date(),
     });
 
     const tokens = await this.generateTokens(entity.user);
 
-    return {
-      ...tokens,
-      user: {
-        id: entity.user.id,
-        email: entity.user.email,
-        roles: entity.user.userRoles?.map((ur) => ur.role.name) || [],
-        firstName: entity.user.person.firstName,
-        lastName: entity.user.person.lastName,
-        isVet: false,
-      },
-    };
+    return UserMapper.toAuthResponseDto(
+      entity.user,
+      tokens.accessToken,
+      tokens.refreshToken,
+      temporaryAccess.requiresPasswordChange,
+    );
   }
 
   async logout(userId: number, dto: LogoutDto) {
@@ -295,7 +298,7 @@ export class AuthService {
     }
 
     const token = await this.passwordResetTokenRepository.findOne({
-      where: { userId: user.id },
+      where: { userId: user.id, channel: 'email' },
       order: { createdAt: 'DESC' },
     });
 
@@ -325,6 +328,7 @@ export class AuthService {
 
       user.passwordHash = await bcrypt.hash(dto.newPassword, salt);
       await manager.save(User, user);
+      await this.temporaryAccessService.invalidateForUser(user.id, manager);
 
       await manager
         .createQueryBuilder()
