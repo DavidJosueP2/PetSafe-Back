@@ -99,8 +99,8 @@ export class PatientsController {
     return this.patientsService.removeCondition(id, conditionId, req.user.userId);
   }
 
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
-  @Get('by-client/:clientId')
+  @Roles(RoleEnum.ADMIN)
+  @Get('admin/by-client/:clientId')
   findAllByClientId(
     @Param('clientId', ParseIntPipe) clientId: number,
     @Request() req: { user: { userId: number; roles: string[] } },
