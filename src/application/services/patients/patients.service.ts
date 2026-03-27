@@ -481,6 +481,8 @@ export class PatientsService {
         }
         : null,
       sterilized: patient.sterilized,
+      generalAllergies: patient.generalAllergies ?? null,
+      generalHistory: patient.generalHistory ?? null,
       clinicalObservations: patient.conditions ?? [],
       recentActivity: null,
     };
@@ -519,6 +521,12 @@ export class PatientsService {
       if (dto.currentWeight !== undefined) updateData.currentWeight = dto.currentWeight ?? null;
       if (dto.colorId !== undefined) updateData.colorId = dto.colorId ?? null;
       if (dto.sterilized !== undefined) updateData.isSterilized = dto.sterilized;
+      if (dto.generalAllergies !== undefined) {
+        updateData.generalAllergies = dto.generalAllergies ?? null;
+      }
+      if (dto.generalHistory !== undefined) {
+        updateData.generalHistory = dto.generalHistory ?? null;
+      }
 
       await manager.update(Patient, patientId, updateData);
 
@@ -598,6 +606,8 @@ type PatientAdminBasicDetailResponse = {
     name: string;
   } | null;
   sterilized: boolean;
+  generalAllergies: string | null;
+  generalHistory: string | null;
   clinicalObservations: PatientConditionResponseDto[];
   recentActivity: null;
 };
