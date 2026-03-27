@@ -120,4 +120,14 @@ export class PatientsController {
   ) {
     return this.patientsService.findAdminBasic(id, req.user.roles);
   }
+
+  @Roles(RoleEnum.ADMIN)
+  @Patch('admin/:id/basic')
+  updateAdminBasic(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePatientDto,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ) {
+    return this.patientsService.updateAdminBasic(id, dto, req.user.roles);
+  }
 }

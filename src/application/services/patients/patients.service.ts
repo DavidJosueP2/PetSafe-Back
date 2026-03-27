@@ -486,6 +486,46 @@ export class PatientsService {
     };
   }
 
+  async updateAdminBasic(
+    patientId: number,
+    dto: UpdatePatientDto,
+    roles: string[],
+  ): Promise<PatientResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      if (!this.canAccessAnyPatient(roles)) {
+        throw new NotFoundException('Mascota no encontrada');
+      }
+
+      const repo = manager.getRepository(Patient);
+      const existingPatient = await repo.findOne({ where: { id: patientId } });
+
+      if (!existingPatient || existingPatient.deletedAt) {
+        throw new NotFoundException('Mascota no encontrada');
+      }
+
+      const targetSpeciesId = dto.speciesId ?? existingPatient.speciesId;
+      const targetBreedId =
+        dto.breedId !== undefined ? (dto.breedId ?? null) : existingPatient.breedId;
+      await this.ensurePatientTaxonomyIsValid(targetSpeciesId, targetBreedId, manager);
+
+      const updateData: Partial<Patient> = {};
+      if (dto.name !== undefined) updateData.name = dto.name;
+      if (dto.speciesId !== undefined) updateData.speciesId = dto.speciesId;
+      if (dto.breedId !== undefined) updateData.breedId = dto.breedId ?? null;
+      if (dto.sex !== undefined) updateData.sex = dto.sex as any;
+      if (dto.birthDate !== undefined) {
+        updateData.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
+      }
+      if (dto.currentWeight !== undefined) updateData.currentWeight = dto.currentWeight ?? null;
+      if (dto.colorId !== undefined) updateData.colorId = dto.colorId ?? null;
+      if (dto.sterilized !== undefined) updateData.isSterilized = dto.sterilized;
+
+      await manager.update(Patient, patientId, updateData);
+
+      return this.findOneInternal(patientId, 0, manager, roles);
+    });
+  }
+
 }
 
 type PatientBasicByClientResponse = {
