@@ -1,0 +1,2464 @@
+{
+  "info": {
+    "name": "PetSafe API",
+    "description": "Colección Postman reconstruida por bloques. Este primer bloque cubre Auth y Users con los contratos actuales del sistema.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@safepet.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "Admin123!"
+    },
+    {
+      "key": "clientEmail",
+      "value": "cliente@safepet.com"
+    },
+    {
+      "key": "clientPassword",
+      "value": "Cliente123!"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "clientToken",
+      "value": ""
+    },
+    {
+      "key": "clientRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "passwordResetEmail",
+      "value": "cliente@safepet.com"
+    },
+    {
+      "key": "passwordResetCode",
+      "value": ""
+    },
+    {
+      "key": "passwordResetNewPassword",
+      "value": "Cliente12345!"
+    },
+    {
+      "key": "clientId",
+      "value": ""
+    },
+    {
+      "key": "zootecnicalGroupId",
+      "value": ""
+    },
+    {
+      "key": "speciesId",
+      "value": ""
+    },
+    {
+      "key": "breedId",
+      "value": ""
+    },
+    {
+      "key": "patientId",
+      "value": ""
+    },
+    {
+      "key": "conditionId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "✅ Login — admin (seed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "  pm.collectionVariables.set('adminRefreshToken', body.refreshToken);",
+                  "  pm.test('Se capturo el token del admin', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string');",
+                  "    pm.expect(body.refreshToken).to.be.a('string');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Login — cliente (seed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('clientToken', body.accessToken);",
+                  "  pm.collectionVariables.set('clientRefreshToken', body.refreshToken);",
+                  "  pm.test('Se capturo el token del cliente', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string');",
+                  "    pm.expect(body.refreshToken).to.be.a('string');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{clientPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Login — credenciales invalidas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"ClaveIncorrecta123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Refresh Token — cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('clientToken', body.accessToken);",
+                  "  pm.collectionVariables.set('clientRefreshToken', body.refreshToken);",
+                  "  pm.test('Se rotaron los tokens del cliente', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string');",
+                  "    pm.expect(body.refreshToken).to.be.a('string');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{clientRefreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Refresh Token — token vacio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Cambiar contraseña — cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{clientPassword}}\",\n  \"newPassword\": \"{{passwordResetNewPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Cambiar contraseña — sin token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{clientPassword}}\",\n  \"newPassword\": \"{{passwordResetNewPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Solicitar recuperacion de contraseña",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{passwordResetEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/password-reset/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password-reset",
+                "request"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Solicitar recuperacion — email invalido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"correo-invalido\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/password-reset/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password-reset",
+                "request"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Confirmar recuperacion de contraseña",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{passwordResetEmail}}\",\n  \"code\": \"{{passwordResetCode}}\",\n  \"newPassword\": \"{{passwordResetNewPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/password-reset/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password-reset",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Confirmar recuperacion — codigo invalido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{passwordResetEmail}}\",\n  \"code\": \"000000\",\n  \"newPassword\": \"{{passwordResetNewPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/password-reset/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password-reset",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Logout — cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{clientRefreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Users",
+      "item": [
+        {
+          "name": "✅ Obtener mi perfil — cliente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener mi perfil — admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener mi perfil — sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar mi perfil — cliente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Cliente\",\n  \"lastName\": \"Actualizado\",\n  \"phone\": \"0999999999\",\n  \"address\": \"Direccion actualizada 123\",\n  \"gender\": \"M\",\n  \"birthDate\": \"1998-02-10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar mi perfil — campo no permitido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Cliente\",\n  \"unknownField\": \"valor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar mi perfil — email invalido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"correo-no-valido\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐾 Zootecnical Groups",
+      "item": [
+        {
+          "name": "✅ Listar grupos zootecnicos — admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear grupo zootecnico — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('zootecnicalGroupId', body.id);",
+                  "  pm.test('Se capturo el id del grupo zootecnico', function () {",
+                  "    pm.expect(body.id).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Reptiles\",\n  \"description\": \"Grupo zootecnico para reptiles de compania\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear grupo zootecnico — validacion sin nombre",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Sin nombre\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear grupo zootecnico — duplicado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Reptiles\",\n  \"description\": \"Intento duplicado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener grupo zootecnico por id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups",
+                "{{zootecnicalGroupId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener grupo zootecnico por id — no existe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar grupo zootecnico — admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Grupo zootecnico actualizado desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups",
+                "{{zootecnicalGroupId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar grupo zootecnico — campo no permitido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unknownField\": \"valor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups",
+                "{{zootecnicalGroupId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar grupo zootecnico — admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups",
+                "{{zootecnicalGroupId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar grupo zootecnico — no existe",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/zootecnical-groups/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zootecnical-groups",
+                "999999"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐕 Species",
+      "item": [
+        {
+          "name": "✅ Listar especies — admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/species?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear especie — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('speciesId', body.id);",
+                  "  pm.test('Se capturo el id de la especie', function () {",
+                  "    pm.expect(body.id).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"zootecnicalGroupId\": {{zootecnicalGroupId}},\n  \"name\": \"Iguana\",\n  \"description\": \"Especie reptil de prueba\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/species",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear especie — sin grupo zootecnico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Camaleon\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/species",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear especie — grupo zootecnico no existe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"zootecnicalGroupId\": 999999,\n  \"name\": \"Camaleon\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/species",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear especie — duplicada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"zootecnicalGroupId\": {{zootecnicalGroupId}},\n  \"name\": \"Iguana\",\n  \"description\": \"Intento duplicado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/species",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener especie por id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/species/{{speciesId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species",
+                "{{speciesId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener especie por id — no existe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/species/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar especie — admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Especie reptil actualizada desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/species/{{speciesId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species",
+                "{{speciesId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar especie — campo no permitido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unknownField\": \"valor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/species/{{speciesId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species",
+                "{{speciesId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar especie — admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/species/{{speciesId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species",
+                "{{speciesId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar especie — no existe",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/species/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species",
+                "999999"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐩 Breeds",
+      "item": [
+        {
+          "name": "✅ Listar razas — admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/breeds?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear raza — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('breedId', body.id);",
+                  "  pm.test('Se capturo el id de la raza', function () {",
+                  "    pm.expect(body.id).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Iguana Verde\",\n  \"speciesId\": {{speciesId}},\n  \"description\": \"Raza o variedad de prueba\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/breeds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear raza — sin especie",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Iguana Azul\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/breeds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear raza — especie no existe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Iguana Azul\",\n  \"speciesId\": 999999\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/breeds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear raza — duplicada en la misma especie",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Iguana Verde\",\n  \"speciesId\": {{speciesId}},\n  \"description\": \"Intento duplicado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/breeds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener raza por id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/breeds/{{breedId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds",
+                "{{breedId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener raza por id — no existe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/breeds/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar raza — admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Raza actualizada desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/breeds/{{breedId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds",
+                "{{breedId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar raza — campo no permitido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unknownField\": \"valor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/breeds/{{breedId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds",
+                "{{breedId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar raza — admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/breeds/{{breedId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds",
+                "{{breedId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar raza — no existe",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/breeds/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "breeds",
+                "999999"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Clients",
+      "item": [
+        {
+          "name": "✅ Listar clientes — admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear cliente — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('clientId', body.id);",
+                  "  pm.test('Se capturo el id del cliente', function () {",
+                  "    pm.expect(body.id).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Maria\",\n  \"lastName\": \"Perez\",\n  \"documentId\": \"0912345678\",\n  \"phone\": \"0981111111\",\n  \"address\": \"Calle Principal 123\",\n  \"gender\": \"F\",\n  \"birthDate\": \"1995-06-15\",\n  \"notes\": \"Cliente creado desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear cliente con cuenta — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('clientId', body.id);",
+                  "  pm.collectionVariables.set('clientEmail', 'maria.con.cuenta@example.com');",
+                  "  pm.test('Se capturo el id del cliente con cuenta', function () {",
+                  "    pm.expect(body.id).to.exist;",
+                  "    pm.expect(body.email).to.eql('maria.con.cuenta@example.com');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Maria\",\n  \"lastName\": \"Con Cuenta\",\n  \"documentId\": \"0912345679\",\n  \"phone\": \"0981111112\",\n  \"address\": \"Calle Secundaria 456\",\n  \"gender\": \"F\",\n  \"birthDate\": \"1994-08-20\",\n  \"notes\": \"Cliente creado con acceso desde Postman\",\n  \"user\": {\n    \"email\": \"maria.con.cuenta@example.com\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear acceso para cliente existente — admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cliente.acceso@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}/access",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}",
+                "access"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear cliente — validacion sin nombres",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lastName\": \"Perez\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear cliente — genero invalido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Luis\",\n  \"lastName\": \"Perez\",\n  \"gender\": \"X\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener cliente por id — admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener cliente por id — no existe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar cliente — admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0982222222\",\n  \"notes\": \"Cliente actualizado desde Postman\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar cliente — campo no permitido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unknownField\": \"valor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Filtrar clientes — por firstName y documentId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients?page=1&limit=10&firstName=Maria&documentId=0912345678",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "firstName",
+                  "value": "Maria"
+                },
+                {
+                  "key": "documentId",
+                  "value": "0912345678"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Filtrar clientes — por email",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients?page=1&limit=10&email={{clientEmail}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "email",
+                  "value": "{{clientEmail}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar clientes — cliente app",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar cliente — no existe",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "999999"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐶 Patients",
+      "item": [
+        {
+          "name": "✅ Crear mascota — cliente app",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('patientId', String(body.id));",
+                  "  pm.test('Se capturo el patientId', function () {",
+                  "    pm.expect(body.id).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Luna\",\n  \"speciesId\": {{speciesId}},\n  \"breedId\": {{breedId}},\n  \"sex\": \"HEMBRA\",\n  \"birthDate\": \"2021-05-10\",\n  \"currentWeight\": 8.4,\n  \"sterilized\": true,\n  \"microchipCode\": \"MC-0001\",\n  \"distinguishingMarks\": \"Mancha blanca en el pecho\",\n  \"generalAllergies\": \"Ninguna\",\n  \"generalHistory\": \"Paciente creada desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear mascota — admin asignando clientId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Max\",\n  \"speciesId\": {{speciesId}},\n  \"breedId\": {{breedId}},\n  \"sex\": \"MACHO\",\n  \"currentWeight\": 12.1,\n  \"sterilized\": false,\n  \"clientId\": {{clientId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear mascota — falta name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speciesId\": {{speciesId}},\n  \"sex\": \"HEMBRA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear mascota — speciesId inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Milo\",\n  \"speciesId\": 999999,\n  \"sex\": \"MACHO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear mascota — admin sin clientId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toby\",\n  \"speciesId\": {{speciesId}},\n  \"breedId\": {{breedId}},\n  \"sex\": \"MACHO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar mascotas — cliente app",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients?page=1&limit=10&search=Luna",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "Luna"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener mascota por id — cliente app",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener mascota por id — no existe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar mascota — cliente app",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentWeight\": 8.9,\n  \"sterilized\": true,\n  \"generalHistory\": \"Control preventivo actualizado desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar mascota — campo no permitido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unknownField\": \"valor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Agregar condicion a mascota",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('conditionId', String(body.id));",
+                  "  pm.test('Se capturo el conditionId', function () {",
+                  "    pm.expect(body.id).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ALERGIA\",\n  \"name\": \"Alergia alimentaria\",\n  \"description\": \"Reaccion leve al pollo\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/conditions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "conditions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Agregar condicion — falta type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dermatitis\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/conditions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "conditions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar condicion de mascota",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/conditions/{{conditionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "conditions",
+                "{{conditionId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar condicion — no existe",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/conditions/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "conditions",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar mascota — cliente app",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar mascota — no existe",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "999999"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
