@@ -17,6 +17,11 @@ import { CreateClientDto } from '../../../presentation/dto/clients/create-client
 import { UpdateClientDto } from '../../../presentation/dto/clients/update-client.dto.js';
 import { ListClientsQueryDto } from '../../../presentation/dto/clients/list-clients-query.dto.js';
 import { ClientResponseDto, PaginatedClientsResponseDto } from '../../../presentation/dto/clients/client-response.dto.js';
+import {
+  ClientPetSummary,
+  PaginatedBasicTutorsResponse,
+  PaginatedClientSummaryResponse,
+} from '../../../presentation/dto/clients/client-summary-response.dto.js';
 import { ClientAccessService } from './client-access.service.js';
 import { ClientMapper } from '../../mappers/client.mapper.js';
 
@@ -481,41 +486,3 @@ export class ClientsService {
     };
   }
 }
-
-// Estos dtos son para los metodos de findSummaryList
-type ClientPetSummary = {
-  id: number;
-  name: string;
-};
-
-type ClientSummaryItem = ClientResponseDto & {
-  pets: ClientPetSummary[];
-  petsCount: number;
-};
-
-type PaginatedClientSummaryResponse = {
-  data: ClientSummaryItem[];
-  meta: PaginatedClientsResponseDto['meta'];
-};
-
-// Estos dtos son para el metodo findBasicTutors
-
-type BasicTutorResponse = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-};
-
-type PaginatedBasicTutorsResponse = {
-  data: BasicTutorResponse[];
-  meta: {
-    totalItems: number;
-    itemCount: number;
-    itemsPerPage: number;
-    totalPages: number;
-    currentPage: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
-};
