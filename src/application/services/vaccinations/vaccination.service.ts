@@ -287,15 +287,17 @@ export class VaccinationService {
     dto: CreatePatientVaccineRecordDto,
     userId: number,
   ): Promise<PatientVaccineRecordResponseDto> {
-    await this.ensurePatientExists(patientId);
+    const patient = await this.findPatientOrFail(patientId);
 
     // La vacuna debe existir y estar activa
     const vaccine = await this.vaccineRepo.findOne({ where: { id: dto.vaccineId } });
-    if (!vaccine || vaccine.deletedAt) {
+    if (!vaccine || vaccine.deletedAt || !vaccine.isActive) {
       throw new NotFoundException(
         'Vacuna no encontrada en el catálogo. Puede haber sido desactivada; consulta al administrador.',
       );
     }
+
+    this.ensureVaccineMatchesPatientSpecies(vaccine, patient);
 
     // Si se provee encounter, verificar que existe y corresponde al paciente
     if (dto.encounterId) {
@@ -440,6 +442,14 @@ export class VaccinationService {
     }
   }
 
+  private async findPatientOrFail(patientId: number): Promise<Patient> {
+    const patient = await this.patientRepo.findOne({ where: { id: patientId }, relations: ['species'] });
+    if (!patient || patient.deletedAt) {
+      throw new NotFoundException('Paciente no encontrado.');
+    }
+    return patient;
+  }
+
   private async ensureSpeciesExists(speciesId: number): Promise<void> {
     const species = await this.speciesRepo.findOne({ where: { id: speciesId } });
     if (!species || species.deletedAt) {
@@ -472,5 +482,13 @@ export class VaccinationService {
       encounterId: r.encounterId ?? null,
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
     };
+  }
+
+  private ensureVaccineMatchesPatientSpecies(vaccine: Vaccine, patient: Patient): void {
+    if (vaccine.speciesId !== patient.speciesId) {
+      throw new BadRequestException(
+        `La vacuna "${vaccine.name}" no corresponde a la especie del paciente.`,
+      );
+    }
   }
 }

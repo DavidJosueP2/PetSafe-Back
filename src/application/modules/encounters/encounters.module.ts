@@ -2,6 +2,11 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { EncountersService } from '../../services/encounters/encounters.service.js';
+import { EncounterCoreService } from '../../services/encounters/encounter-core.service.js';
+import { EncounterSharedService } from '../../services/encounters/encounter-shared.service.js';
+import { EncounterRecordsService } from '../../services/encounters/encounter-records.service.js';
+import { EncounterActionsService } from '../../services/encounters/encounter-actions.service.js';
+import { EncounterTreatmentService } from '../../services/encounters/encounter-treatment.service.js';
 import { EncountersController } from '../../../presentation/controllers/encounters/encounters.controller.js';
 
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
@@ -22,6 +27,8 @@ import { Antiparasitic } from '../../../domain/entities/catalogs/antiparasitic.e
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientVaccineRecord } from '../../../domain/entities/patients/patient-vaccine-record.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
+import { Employee } from '../../../domain/entities/persons/employee.entity.js';
+import { User } from '../../../domain/entities/auth/user.entity.js';
 
 @Module({
   imports: [
@@ -44,10 +51,19 @@ import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
       Patient,
       PatientVaccineRecord,
       UserRole,
+      Employee,
+      User,
     ]),
   ],
   controllers: [EncountersController],
-  providers: [EncountersService],
+  providers: [
+    EncountersService,
+    EncounterCoreService,
+    EncounterSharedService,
+    EncounterRecordsService,
+    EncounterActionsService,
+    EncounterTreatmentService,
+  ],
   exports: [EncountersService],
 })
 export class EncountersModule {}
