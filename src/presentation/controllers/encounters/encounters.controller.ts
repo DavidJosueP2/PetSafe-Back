@@ -43,9 +43,9 @@ export class EncountersController {
   @Post()
   create(
     @Body() dto: CreateEncounterDto,
-    @Request() req: { user: { userId: number } },
+    @Request() req: { user: { userId: number; roles: string[] } },
   ) {
-    return this.encountersService.create(dto, req.user.userId);
+    return this.encountersService.create(dto, req.user.userId, req.user.roles);
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN, RoleEnum.RECEPCIONISTA)
