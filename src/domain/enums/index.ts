@@ -86,6 +86,26 @@ export enum VaccineSpeciesEnum {
   OTRO = 'OTRO',
 }
 
+export enum VaccinationSchemeVersionStatusEnum {
+  VIGENTE = 'VIGENTE',
+  REEMPLAZADO = 'REEMPLAZADO',
+  SUSPENDIDO = 'SUSPENDIDO',
+}
+
+export enum PatientVaccinationPlanStatusEnum {
+  ACTIVO = 'ACTIVO',
+  CERRADO = 'CERRADO',
+  REEMPLAZADO = 'REEMPLAZADO',
+}
+
+export enum PatientVaccinationPlanDoseStatusEnum {
+  APLICADA = 'APLICADA',
+  DESCONOCIDA = 'DESCONOCIDA',
+  NO_APLICADA = 'NO_APLICADA',
+  BLOQUEADA = 'BLOQUEADA',
+  REQUIERE_REVISION = 'REQUIERE_REVISION',
+}
+
 export enum AppetiteStatusEnum {
   NORMAL = 'NORMAL',
   DISMINUIDO = 'DISMINUIDO',
@@ -143,4 +163,11 @@ export enum RoleEnum {
   MVZ = 'MVZ',
   RECEPCIONISTA = 'RECEPCIONISTA',
   CLIENTE_APP = 'CLIENTE_APP',
+}
+
+export enum AdoptionStatusEnum {
+  DISPONIBLE = 'DISPONIBLE',
+  EN_PROCESO = 'EN_PROCESO',
+  ADOPTADO = 'ADOPTADO',
+  CANCELADO = 'CANCELADO',
 }

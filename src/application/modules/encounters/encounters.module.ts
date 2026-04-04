@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { VaccinationModule } from '../vaccinations/vaccination.module.js';
 
 import { EncountersService } from '../../services/encounters/encounters.service.js';
+import { EncounterCoreService } from '../../services/encounters/encounter-core.service.js';
+import { EncounterSharedService } from '../../services/encounters/encounter-shared.service.js';
+import { EncounterRecordsService } from '../../services/encounters/encounter-records.service.js';
+import { EncounterActionsService } from '../../services/encounters/encounter-actions.service.js';
+import { EncounterTreatmentService } from '../../services/encounters/encounter-treatment.service.js';
 import { EncountersController } from '../../../presentation/controllers/encounters/encounters.controller.js';
 
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
@@ -19,12 +25,17 @@ import { Surgery } from '../../../domain/entities/encounters/surgery.entity.js';
 import { Procedure } from '../../../domain/entities/encounters/procedure.entity.js';
 import { Vaccine } from '../../../domain/entities/catalogs/vaccine.entity.js';
 import { Antiparasitic } from '../../../domain/entities/catalogs/antiparasitic.entity.js';
+import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
+import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientVaccineRecord } from '../../../domain/entities/patients/patient-vaccine-record.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
+import { Employee } from '../../../domain/entities/persons/employee.entity.js';
+import { User } from '../../../domain/entities/auth/user.entity.js';
 
 @Module({
   imports: [
+    VaccinationModule,
     TypeOrmModule.forFeature([
       Encounter,
       EncounterConsultationReason,
@@ -41,13 +52,24 @@ import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
       Procedure,
       Vaccine,
       Antiparasitic,
+      Appointment,
+      QueueEntry,
       Patient,
       PatientVaccineRecord,
       UserRole,
+      Employee,
+      User,
     ]),
   ],
   controllers: [EncountersController],
-  providers: [EncountersService],
+  providers: [
+    EncountersService,
+    EncounterCoreService,
+    EncounterSharedService,
+    EncounterRecordsService,
+    EncounterActionsService,
+    EncounterTreatmentService,
+  ],
   exports: [EncountersService],
 })
 export class EncountersModule {}

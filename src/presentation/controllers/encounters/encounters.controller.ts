@@ -43,9 +43,9 @@ export class EncountersController {
   @Post()
   create(
     @Body() dto: CreateEncounterDto,
-    @Request() req: { user: { userId: number } },
+    @Request() req: { user: { userId: number; roles: string[] } },
   ) {
-    return this.encountersService.create(dto, req.user.userId);
+    return this.encountersService.create(dto, req.user.userId, req.user.roles);
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN, RoleEnum.RECEPCIONISTA)
@@ -71,6 +71,15 @@ export class EncountersController {
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
   @Patch(':id/close')
   closeEncounter(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CloseEncounterDto,
+  ) {
+    return this.encountersService.closeEncounter(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Patch(':id/finish')
+  finishEncounter(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CloseEncounterDto,
   ) {
