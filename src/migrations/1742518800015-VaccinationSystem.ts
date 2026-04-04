@@ -24,6 +24,7 @@ export class VaccinationSystem1742518800015 implements MigrationInterface {
         vaccine_id int NOT NULL,
         application_date date NOT NULL,
         administered_by varchar(120),
+        administered_by_employee_id int,
         administered_at varchar(180),
         is_external boolean NOT NULL DEFAULT false,
         batch_number varchar(80),
@@ -39,6 +40,7 @@ export class VaccinationSystem1742518800015 implements MigrationInterface {
         CONSTRAINT fk_pvr_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE RESTRICT,
         CONSTRAINT fk_pvr_vaccine FOREIGN KEY (vaccine_id) REFERENCES vaccines(id) ON DELETE RESTRICT,
         CONSTRAINT fk_pvr_encounter FOREIGN KEY (encounter_id) REFERENCES encounters(id) ON DELETE SET NULL,
+        CONSTRAINT fk_pvr_administered_by_employee FOREIGN KEY (administered_by_employee_id) REFERENCES employees(id) ON DELETE RESTRICT,
         CONSTRAINT fk_pvr_created_by FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
         CONSTRAINT fk_pvr_deleted_by FOREIGN KEY (deleted_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
         CONSTRAINT ck_pvr_next_dose CHECK (next_dose_date IS NULL OR next_dose_date >= application_date)
@@ -151,6 +153,7 @@ export class VaccinationSystem1742518800015 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_pvr_patient_id ON patient_vaccine_records(patient_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_pvr_vaccine_id ON patient_vaccine_records(vaccine_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_pvr_encounter_id ON patient_vaccine_records(encounter_id)`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_pvr_administered_by_employee_id ON patient_vaccine_records(administered_by_employee_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_pvr_deleted_at ON patient_vaccine_records(deleted_at)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_vaccines_species_id ON vaccines(species_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_vaccination_schemes_species_id ON vaccination_schemes(species_id)`);
@@ -289,6 +292,7 @@ export class VaccinationSystem1742518800015 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX IF EXISTS idx_vaccination_schemes_species_id`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_vaccines_species_id`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_pvr_deleted_at`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_pvr_administered_by_employee_id`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_pvr_encounter_id`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_pvr_vaccine_id`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_pvr_patient_id`);

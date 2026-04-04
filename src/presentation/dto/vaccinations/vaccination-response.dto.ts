@@ -17,6 +17,7 @@ export class PatientVaccineRecordResponseDto {
   vaccineName!: string;
   species!: VaccinationSpeciesSummaryDto | null;
   applicationDate!: string;
+  administeredByEmployeeId!: number | null;
   administeredBy!: string | null;
   administeredAt!: string | null;
   isExternal!: boolean;

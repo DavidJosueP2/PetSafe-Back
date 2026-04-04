@@ -27,6 +27,7 @@ import {
   PatientVaccineRecordResponseDto,
   VaccinationSchemeVersionResponseDto,
 } from '../../../presentation/dto/vaccinations/vaccination-response.dto.js';
+import { PatientVaccinationPlanChangeModeEnum } from '../../../presentation/dto/patients/update-patient-vaccination-scheme.dto.js';
 
 @Injectable()
 export class VaccinationPlanService {
@@ -53,6 +54,7 @@ export class VaccinationPlanService {
     patientId: number,
     speciesId: number,
     birthDate: Date | null,
+    vaccinationSchemeId?: number | null,
     manager?: EntityManager,
   ): Promise<PatientVaccinationPlan> {
     const existingPlan = await this.findActivePlan(patientId, manager);
@@ -60,7 +62,11 @@ export class VaccinationPlanService {
       return existingPlan;
     }
 
-    const schemeVersion = await this.findCurrentSchemeVersionForSpecies(speciesId, manager);
+    const schemeVersion = await this.resolveSchemeVersionForPatient(
+      speciesId,
+      vaccinationSchemeId ?? null,
+      manager,
+    );
     const planRepo = this.getRepo(PatientVaccinationPlan, this.planRepo, manager);
     const planDoseRepo = this.getRepo(PatientVaccinationPlanDose, this.planDoseRepo, manager);
 
@@ -102,6 +108,7 @@ export class VaccinationPlanService {
       patient.id,
       patient.speciesId,
       patient.birthDate ?? null,
+      null,
       manager,
     );
   }
@@ -114,7 +121,7 @@ export class VaccinationPlanService {
   ): Promise<void> {
     const activePlan = await this.findActivePlan(patientId, manager);
     if (!activePlan) {
-      await this.initializePlanForPatient(patientId, speciesId, birthDate, manager);
+      await this.initializePlanForPatient(patientId, speciesId, birthDate, null, manager);
       return;
     }
 
@@ -213,16 +220,20 @@ export class VaccinationPlanService {
     }
   }
 
-  async getPatientPlanDetail(patientId: number): Promise<PatientVaccinationPlanResponseDto> {
-    const plan = await this.ensurePlanForPatient(patientId);
-    const applications = await this.findApplicationsForPatient(patientId);
+  async getPatientPlanDetail(
+    patientId: number,
+    manager?: EntityManager,
+    extraAlerts: string[] = [],
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    const plan = await this.ensurePlanForPatient(patientId, manager);
+    const applications = await this.findApplicationsForPatient(patientId, manager);
     const doses = plan.doses
       .filter((dose) => !dose.deletedAt)
       .sort((a, b) => a.doseOrder - b.doseOrder)
       .map((dose) => this.toPlanDoseResponse(dose));
 
     const coverage = this.calculateCoverage(doses);
-    const alerts = this.buildAlerts(doses);
+    const alerts = [...this.buildAlerts(doses), ...extraAlerts];
 
     return {
       id: plan.id,
@@ -286,18 +297,21 @@ export class VaccinationPlanService {
 
   async findApplicationsForPatient(
     patientId: number,
+    manager?: EntityManager,
   ): Promise<PatientVaccineRecordResponseDto[]> {
-    const records = await this.applicationRepo.find({
+    const applicationRepo = this.getRepo(PatientVaccineRecord, this.applicationRepo, manager);
+    const records = await applicationRepo.find({
       where: {
         patientId,
         deletedAt: IsNull(),
       } as never,
-      relations: ['vaccine', 'vaccine.species'],
+      relations: ['vaccine', 'vaccine.species', 'administeredByEmployee', 'administeredByEmployee.person'],
       order: { applicationDate: 'DESC', createdAt: 'DESC' },
     });
 
     const planDoseByRecordId = new Map<number, number>();
-    const linkedPlanDoses = await this.planDoseRepo
+    const planDoseRepo = this.getRepo(PatientVaccinationPlanDose, this.planDoseRepo, manager);
+    const linkedPlanDoses = await planDoseRepo
       .createQueryBuilder('dose')
       .innerJoin('dose.plan', 'plan')
       .where('plan.patient_id = :patientId', { patientId })
@@ -313,6 +327,63 @@ export class VaccinationPlanService {
 
     return records.map((record) =>
       this.toApplicationResponse(record, planDoseByRecordId.get(record.id) ?? null),
+    );
+  }
+
+  async reassignOrRefreshPatientPlan(
+    patientId: number,
+    mode: PatientVaccinationPlanChangeModeEnum,
+    vaccinationSchemeId: number | null,
+    notes: string | null,
+    manager?: EntityManager,
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    const patientRepo = this.getRepo(Patient, this.patientRepo, manager);
+    const patient = await patientRepo.findOne({ where: { id: patientId } });
+    if (!patient || patient.deletedAt) {
+      throw new NotFoundException('Mascota no encontrada.');
+    }
+
+    const currentPlan = await this.findActivePlan(patientId, manager);
+    if (!currentPlan) {
+      throw new NotFoundException('La mascota no tiene un plan vacunal activo.');
+    }
+
+    const targetVersion = await this.resolveTargetVersionForPlanChange(
+      currentPlan,
+      patient.speciesId,
+      mode,
+      vaccinationSchemeId,
+      manager,
+    );
+
+    if (targetVersion.id === currentPlan.schemeVersionId) {
+      return this.getPatientPlanDetail(patientId, manager, [
+        'La mascota ya utiliza la versión vigente seleccionada; no fue necesario reasignar el plan.',
+      ]);
+    }
+
+    const createdPlan = await this.replacePlanWithVersion(
+      patient,
+      currentPlan,
+      targetVersion,
+      notes,
+      manager,
+    );
+
+    const unreconciledApplications = await this.reconcileApplicationsIntoPlan(
+      patientId,
+      createdPlan.id,
+      manager,
+    );
+
+    return this.getPatientPlanDetail(
+      patientId,
+      manager,
+      unreconciledApplications > 0
+        ? [
+            `Existen ${unreconciledApplications} aplicaciones históricas no conciliadas con el nuevo plan y requieren revisión clínica.`,
+          ]
+        : [],
     );
   }
 
@@ -363,7 +434,7 @@ export class VaccinationPlanService {
       }
     }
 
-    await this.initializePlanForPatient(patientId, speciesId, birthDate, manager);
+    await this.initializePlanForPatient(patientId, speciesId, birthDate, null, manager);
   }
 
   private buildPlanDoses(
@@ -484,10 +555,13 @@ export class VaccinationPlanService {
       .where('scheme.species_id = :speciesId', { speciesId })
       .andWhere('version.deleted_at IS NULL')
       .andWhere('scheme.deleted_at IS NULL')
+      .andWhere('scheme.is_active = true')
+      .andWhere('version.is_active = true')
       .andWhere('version.status = :status', {
         status: VaccinationSchemeVersionStatusEnum.VIGENTE,
       })
       .andWhere('version.valid_from <= CURRENT_DATE')
+      .andWhere('(version.valid_to IS NULL OR version.valid_to >= CURRENT_DATE)')
       .orderBy('version.version', 'DESC')
       .addOrderBy('version.valid_from', 'DESC')
       .getOne();
@@ -503,6 +577,87 @@ export class VaccinationPlanService {
     );
 
     return speciesVersion;
+  }
+
+  private async findCurrentSchemeVersionForScheme(
+    schemeId: number,
+    speciesId: number,
+    manager?: EntityManager,
+  ): Promise<VaccinationSchemeVersion> {
+    const versionRepo = this.getRepo(
+      VaccinationSchemeVersion,
+      this.schemeVersionRepo,
+      manager,
+    );
+
+    const selectedVersion = await versionRepo
+      .createQueryBuilder('version')
+      .innerJoinAndSelect('version.scheme', 'scheme')
+      .innerJoinAndSelect('scheme.species', 'species')
+      .leftJoinAndSelect('version.doses', 'doses')
+      .leftJoinAndSelect('doses.vaccine', 'vaccine')
+      .where('scheme.id = :schemeId', { schemeId })
+      .andWhere('scheme.species_id = :speciesId', { speciesId })
+      .andWhere('scheme.deleted_at IS NULL')
+      .andWhere('scheme.is_active = true')
+      .andWhere('version.deleted_at IS NULL')
+      .andWhere('version.is_active = true')
+      .andWhere('version.status = :status', {
+        status: VaccinationSchemeVersionStatusEnum.VIGENTE,
+      })
+      .andWhere('version.valid_from <= CURRENT_DATE')
+      .andWhere('(version.valid_to IS NULL OR version.valid_to >= CURRENT_DATE)')
+      .orderBy('version.version', 'DESC')
+      .addOrderBy('version.valid_from', 'DESC')
+      .getOne();
+
+    if (!selectedVersion) {
+      throw new BadRequestException(
+        'El esquema vacunal seleccionado no está activo, no pertenece a la especie o no tiene una versión vigente utilizable.',
+      );
+    }
+
+    selectedVersion.doses = [...(selectedVersion.doses ?? [])].sort(
+      (a, b) => a.doseOrder - b.doseOrder,
+    );
+
+    return selectedVersion;
+  }
+
+  private async resolveSchemeVersionForPatient(
+    speciesId: number,
+    vaccinationSchemeId: number | null,
+    manager?: EntityManager,
+  ): Promise<VaccinationSchemeVersion> {
+    if (!vaccinationSchemeId) {
+      return this.findCurrentSchemeVersionForSpecies(speciesId, manager);
+    }
+
+    return this.findCurrentSchemeVersionForScheme(vaccinationSchemeId, speciesId, manager);
+  }
+
+  private async resolveTargetVersionForPlanChange(
+    currentPlan: PatientVaccinationPlan,
+    speciesId: number,
+    mode: PatientVaccinationPlanChangeModeEnum,
+    vaccinationSchemeId: number | null,
+    manager?: EntityManager,
+  ): Promise<VaccinationSchemeVersion> {
+    if (mode === PatientVaccinationPlanChangeModeEnum.REFRESH_CURRENT) {
+      return this.findCurrentSchemeVersionForScheme(
+        currentPlan.schemeVersion.schemeId,
+        speciesId,
+        manager,
+      );
+    }
+
+    if (!vaccinationSchemeId) {
+      throw new BadRequestException(
+        'vaccinationSchemeId es obligatorio cuando mode es CHANGE_SCHEME.',
+      );
+    }
+
+    return this.findCurrentSchemeVersionForScheme(vaccinationSchemeId, speciesId, manager);
   }
 
   private async findActivePlan(
@@ -539,6 +694,105 @@ export class VaccinationPlanService {
     }
 
     return plan;
+  }
+
+  private async replacePlanWithVersion(
+    patient: Patient,
+    currentPlan: PatientVaccinationPlan,
+    targetVersion: VaccinationSchemeVersion,
+    notes: string | null,
+    manager?: EntityManager,
+  ): Promise<PatientVaccinationPlan> {
+    const planRepo = this.getRepo(PatientVaccinationPlan, this.planRepo, manager);
+    const planDoseRepo = this.getRepo(PatientVaccinationPlanDose, this.planDoseRepo, manager);
+
+    currentPlan.status = PatientVaccinationPlanStatusEnum.REEMPLAZADO;
+    currentPlan.isActive = false;
+    currentPlan.deletedAt = new Date();
+    await planRepo.save(currentPlan);
+
+    for (const dose of currentPlan.doses ?? []) {
+      dose.isActive = false;
+      dose.deletedAt = new Date();
+      await planDoseRepo.save(dose);
+    }
+
+    const assignedAt = new Date();
+    const newPlan = await planRepo.save(
+      planRepo.create({
+        patientId: patient.id,
+        schemeVersionId: targetVersion.id,
+        status: PatientVaccinationPlanStatusEnum.ACTIVO,
+        assignedAt,
+        notes: notes ?? null,
+      }),
+    );
+
+    const doses = this.buildPlanDoses(
+      newPlan.id,
+      targetVersion,
+      patient.birthDate ?? null,
+      assignedAt,
+    );
+
+    if (doses.length > 0) {
+      await planDoseRepo.save(doses);
+    }
+
+    return (await this.findActivePlan(patient.id, manager))!;
+  }
+
+  private async reconcileApplicationsIntoPlan(
+    patientId: number,
+    planId: number,
+    manager?: EntityManager,
+  ): Promise<number> {
+    const applicationRepo = this.getRepo(PatientVaccineRecord, this.applicationRepo, manager);
+    const planDoseRepo = this.getRepo(PatientVaccinationPlanDose, this.planDoseRepo, manager);
+
+    const applications = await applicationRepo.find({
+      where: {
+        patientId,
+        deletedAt: IsNull(),
+      } as never,
+      order: {
+        applicationDate: 'ASC',
+        createdAt: 'ASC',
+      },
+    });
+
+    const planDoses = await planDoseRepo.find({
+      where: {
+        planId,
+        deletedAt: IsNull(),
+      } as never,
+      relations: ['schemeDose'],
+      order: {
+        doseOrder: 'ASC',
+      },
+    });
+
+    let unreconciledCount = 0;
+
+    for (const application of applications) {
+      const targetDose = planDoses.find(
+        (dose) =>
+          dose.vaccineId === application.vaccineId &&
+          dose.status !== PatientVaccinationPlanDoseStatusEnum.APLICADA,
+      );
+
+      if (!targetDose) {
+        unreconciledCount += 1;
+        continue;
+      }
+
+      targetDose.status = PatientVaccinationPlanDoseStatusEnum.APLICADA;
+      targetDose.appliedAt = application.applicationDate;
+      targetDose.applicationRecordId = application.id;
+      await planDoseRepo.save(targetDose);
+    }
+
+    return unreconciledCount;
   }
 
   private calculateCoverage(
@@ -670,7 +924,10 @@ export class VaccinationPlanService {
           }
         : null,
       applicationDate: this.toDateString(record.applicationDate)!,
-      administeredBy: record.administeredBy ?? null,
+      administeredByEmployeeId: record.administeredByEmployeeId ?? null,
+      administeredBy: record.administeredByEmployee?.person
+        ? `${record.administeredByEmployee.person.firstName} ${record.administeredByEmployee.person.lastName}`.trim()
+        : (record.administeredBy ?? null),
       administeredAt: record.administeredAt ?? null,
       isExternal: record.isExternal,
       batchNumber: record.batchNumber ?? null,
@@ -688,11 +945,16 @@ export class VaccinationPlanService {
     return next;
   }
 
-  private toDateString(value: Date | null | undefined): string | null {
+  private toDateString(value: Date | string | null | undefined): string | null {
     if (!value) {
       return null;
     }
-    return value.toISOString().split('T')[0];
+
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+
+    return String(value).split('T')[0];
   }
 
   private appendNote(current: string | null, next: string): string {

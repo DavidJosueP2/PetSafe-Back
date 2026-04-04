@@ -20,6 +20,9 @@ import { CreatePatientDto } from '../../../presentation/dto/patients/create-pati
 import { UpdatePatientDto } from '../../../presentation/dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../../presentation/dto/patients/create-condition.dto.js';
 import { AddPatientTutorDto } from '../../../presentation/dto/patients/add-patient-tutor.dto.js';
+import {
+  UpdatePatientVaccinationSchemeDto,
+} from '../../../presentation/dto/patients/update-patient-vaccination-scheme.dto.js';
 import { PatientResponseDto, PatientConditionResponseDto } from '../../../presentation/dto/patients/patient-response.dto.js';
 import {
   PatientAdminBasicDetailResponse,
@@ -27,6 +30,7 @@ import {
   PatientBasicByClientResponse,
   PaginatedPatientsBasicForAdminResponse,
 } from '../../../presentation/dto/patients/patient-basic-response.dto.js';
+import { PatientVaccinationPlanResponseDto } from '../../../presentation/dto/vaccinations/vaccination-response.dto.js';
 import { PatientMapper } from '../../mappers/patient.mapper.js';
 import {
   MediaOwnerTypeEnum,
@@ -158,6 +162,7 @@ export class PatientsService {
           saved.id,
           saved.speciesId,
           saved.birthDate ?? null,
+          dto.vaccinationSchemeId ?? null,
           manager,
         );
 
@@ -415,6 +420,23 @@ export class PatientsService {
 
       await this.ensurePrimaryTutorExists(patientId, manager);
       return this.findOneInternal(patientId, 0, manager, roles);
+    });
+  }
+
+  async updateVaccinationScheme(
+    patientId: number,
+    dto: UpdatePatientVaccinationSchemeDto,
+    roles: string[],
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.ensurePatientAccessibleForStaff(patientId, roles, manager);
+      return this.vaccinationPlanService.reassignOrRefreshPatientPlan(
+        patientId,
+        dto.mode,
+        dto.vaccinationSchemeId ?? null,
+        dto.notes ?? null,
+        manager,
+      );
     });
   }
 

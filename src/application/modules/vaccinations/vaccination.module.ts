@@ -11,6 +11,7 @@ import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Species } from '../../../domain/entities/catalogs/species.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
+import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { VaccinationScheme } from '../../../domain/entities/vaccinations/vaccination-scheme.entity.js';
 import { VaccinationSchemeVersion } from '../../../domain/entities/vaccinations/vaccination-scheme-version.entity.js';
 import { VaccinationSchemeVersionDose } from '../../../domain/entities/vaccinations/vaccination-scheme-version-dose.entity.js';
@@ -26,6 +27,7 @@ import { PatientVaccinationPlanDose } from '../../../domain/entities/vaccination
       Species,
       Encounter,
       UserRole,
+      Employee,
       VaccinationScheme,
       VaccinationSchemeVersion,
       VaccinationSchemeVersionDose,

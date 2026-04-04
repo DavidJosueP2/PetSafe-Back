@@ -6,6 +6,10 @@ export class UpdateVaccinationSchemeVersionStatusDto {
   status!: VaccinationSchemeVersionStatusEnum;
 
   @IsOptional()
+  @IsDateString({}, { message: 'validFrom debe ser una fecha válida (YYYY-MM-DD).' })
+  validFrom?: string;
+
+  @IsOptional()
   @IsDateString({}, { message: 'validTo debe ser una fecha válida (YYYY-MM-DD).' })
   validTo?: string;
 

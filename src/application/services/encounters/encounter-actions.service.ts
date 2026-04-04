@@ -68,7 +68,7 @@ export class EncounterActionsService {
       patientId: encounter.patientId,
       vaccineId: dto.vaccineId,
       applicationDate: new Date(dto.applicationDate),
-      administeredBy: 'Veterinario en Consulta',
+      administeredByEmployeeId: encounter.vetId,
       isExternal: false,
       nextDoseDate: dto.suggestedNextDate ? new Date(dto.suggestedNextDate) : null,
       notes: dto.notes ?? 'Aplicada en consulta médica',

@@ -12,6 +12,7 @@ import { PatientVaccineRecord } from '../../../domain/entities/patients/patient-
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Species } from '../../../domain/entities/catalogs/species.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
+import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { VaccinationScheme } from '../../../domain/entities/vaccinations/vaccination-scheme.entity.js';
 import { VaccinationSchemeVersion } from '../../../domain/entities/vaccinations/vaccination-scheme-version.entity.js';
 import { VaccinationSchemeVersionDose } from '../../../domain/entities/vaccinations/vaccination-scheme-version-dose.entity.js';
@@ -48,6 +49,8 @@ export class VaccinationService {
     private readonly speciesRepo: Repository<Species>,
     @InjectRepository(Encounter)
     private readonly encounterRepo: Repository<Encounter>,
+    @InjectRepository(Employee)
+    private readonly employeeRepo: Repository<Employee>,
     @InjectRepository(VaccinationScheme)
     private readonly schemeRepo: Repository<VaccinationScheme>,
     @InjectRepository(VaccinationSchemeVersion)
@@ -285,27 +288,125 @@ export class VaccinationService {
     versionId: number,
     dto: UpdateVaccinationSchemeVersionStatusDto,
   ): Promise<VaccinationSchemeVersionResponseDto> {
-    const version = await this.schemeVersionRepo.findOne({
-      where: {
-        id: versionId,
-        deletedAt: IsNull(),
-      } as never,
-      relations: ['scheme'],
+    await this.dataSource.transaction(async (manager) => {
+      const versionRepo = manager.getRepository(VaccinationSchemeVersion);
+      const version = await versionRepo.findOne({
+        where: {
+          id: versionId,
+          deletedAt: IsNull(),
+        } as never,
+        relations: ['scheme'],
+      });
+
+      if (!version) {
+        throw new NotFoundException('Versión de esquema vacunal no encontrada.');
+      }
+
+      if (
+        version.status === VaccinationSchemeVersionStatusEnum.SUSPENDIDO &&
+        dto.status !== VaccinationSchemeVersionStatusEnum.SUSPENDIDO
+      ) {
+        throw new BadRequestException(
+          'Una versión suspendida no puede reactivarse ni cambiar a otro estado.',
+        );
+      }
+
+      const currentValidFrom = this.asDateOnly(version.validFrom)!;
+      const requestedValidFrom =
+        dto.validFrom !== undefined
+          ? this.parseDateOnly(dto.validFrom)
+          : dto.status === VaccinationSchemeVersionStatusEnum.VIGENTE
+            ? version.status === VaccinationSchemeVersionStatusEnum.VIGENTE
+              ? currentValidFrom
+              : this.todayDateOnly()
+            : currentValidFrom;
+      const requestedValidTo =
+        dto.validTo !== undefined
+          ? dto.validTo
+            ? this.parseDateOnly(dto.validTo)
+            : null
+          : undefined;
+
+      if (dto.status === VaccinationSchemeVersionStatusEnum.VIGENTE) {
+        if (requestedValidFrom > this.todayDateOnly()) {
+          throw new BadRequestException(
+            'Una versión VIGENTE no puede iniciar en una fecha futura. Si aún no debe entrar en vigor, no la actives todavía.',
+          );
+        }
+
+        if (requestedValidTo) {
+          throw new BadRequestException(
+            'Una versión VIGENTE no debe cerrarse con validTo. Déjalo vacío para mantenerla abierta.',
+          );
+        }
+
+        const otherActiveVersions = await versionRepo.find({
+          where: {
+            schemeId: version.schemeId,
+            deletedAt: IsNull(),
+            status: VaccinationSchemeVersionStatusEnum.VIGENTE,
+          } as never,
+        });
+
+        for (const otherVersion of otherActiveVersions) {
+          if (otherVersion.id === version.id) {
+            continue;
+          }
+
+          const otherValidFrom = this.asDateOnly(otherVersion.validFrom)!;
+          if (requestedValidFrom <= otherValidFrom) {
+            throw new BadRequestException(
+              'La nueva vigencia debe iniciar después de la versión vigente actual para cerrar correctamente la anterior.',
+            );
+          }
+
+          const previousDay = this.addDays(requestedValidFrom, -1);
+          if (previousDay < otherValidFrom) {
+            throw new BadRequestException(
+              'No se pudo cerrar la versión vigente anterior porque el rango de fechas quedaría inválido.',
+            );
+          }
+
+          otherVersion.status = VaccinationSchemeVersionStatusEnum.REEMPLAZADO;
+          otherVersion.validTo = previousDay;
+          await versionRepo.save(otherVersion);
+        }
+
+        version.status = VaccinationSchemeVersionStatusEnum.VIGENTE;
+        version.validFrom = requestedValidFrom;
+        version.validTo = null;
+      } else {
+        const effectiveValidTo = requestedValidTo ?? this.todayDateOnly();
+        if (effectiveValidTo < currentValidFrom) {
+          throw new BadRequestException('validTo no puede ser anterior a validFrom.');
+        }
+
+        if (this.isVersionUsableToday(version)) {
+          const hasOtherUsableVersionForSpecies =
+            await this.hasOtherUsableVersionForSpecies(
+              version.scheme.speciesId,
+              version.id,
+              manager,
+            );
+
+          if (!hasOtherUsableVersionForSpecies) {
+            throw new BadRequestException(
+              'No puedes cerrar esta versión porque dejarías a la especie sin una versión vigente utilizable.',
+            );
+          }
+        }
+
+        version.status = dto.status;
+        version.validTo = effectiveValidTo;
+      }
+
+      if (dto.changeReason !== undefined) {
+        version.changeReason = dto.changeReason?.trim() ?? null;
+      }
+
+      await versionRepo.save(version);
     });
 
-    if (!version) {
-      throw new NotFoundException('Versión de esquema vacunal no encontrada.');
-    }
-
-    version.status = dto.status;
-    if (dto.validTo !== undefined) {
-      version.validTo = dto.validTo ? new Date(dto.validTo) : null;
-    }
-    if (dto.changeReason !== undefined) {
-      version.changeReason = dto.changeReason ?? null;
-    }
-
-    await this.schemeVersionRepo.save(version);
     return this.getSchemeVersion(versionId);
   }
 
@@ -337,6 +438,8 @@ export class VaccinationService {
 
     this.ensureVaccineMatchesPatientSpecies(vaccine, patient);
 
+    const isExternal = dto.encounterId ? false : (dto.isExternal ?? true);
+
     if (dto.encounterId) {
       const encounter = await this.encounterRepo.findOne({
         where: { id: dto.encounterId, patientId },
@@ -347,10 +450,31 @@ export class VaccinationService {
           'El encounter referenciado no existe o no corresponde a este paciente.',
         );
       }
+
+      if (!dto.administeredByEmployeeId) {
+        throw new BadRequestException(
+          'administeredByEmployeeId es obligatorio cuando la aplicación está ligada a un encounter.',
+        );
+      }
+
+      if (encounter.vetId !== dto.administeredByEmployeeId) {
+        throw new BadRequestException(
+          'El veterinario administrador debe coincidir con el veterinario responsable del encounter.',
+        );
+      }
     }
 
     const applicationDate = new Date(dto.applicationDate);
     const nextDoseDate = dto.nextDoseDate ? new Date(dto.nextDoseDate) : null;
+    if (!isExternal && !dto.administeredByEmployeeId) {
+      throw new BadRequestException(
+        'administeredByEmployeeId es obligatorio cuando la aplicación no es externa.',
+      );
+    }
+
+    const veterinarian = dto.administeredByEmployeeId
+      ? await this.findVeterinarianEmployeeOrFail(dto.administeredByEmployeeId)
+      : null;
 
     const saved = await this.dataSource.transaction(async (manager) => {
       const record = await manager.getRepository(PatientVaccineRecord).save(
@@ -358,9 +482,10 @@ export class VaccinationService {
           patientId,
           vaccineId: dto.vaccineId,
           applicationDate,
-          administeredBy: dto.administeredBy?.trim() ?? null,
+          administeredBy: veterinarian ? this.formatEmployeeName(veterinarian) : null,
+          administeredByEmployeeId: veterinarian?.id ?? null,
           administeredAt: dto.administeredAt?.trim() ?? null,
-          isExternal: dto.encounterId ? false : (dto.isExternal ?? true),
+          isExternal,
           batchNumber: dto.batchNumber?.trim() ?? null,
           nextDoseDate,
           notes: dto.notes?.trim() ?? null,
@@ -413,6 +538,27 @@ export class VaccinationService {
     dto: CreateVaccinationSchemeVersionDto,
     manager: EntityManager,
   ): Promise<VaccinationSchemeVersion> {
+    const requestedStatus =
+      dto.status ?? VaccinationSchemeVersionStatusEnum.VIGENTE;
+    if (requestedStatus !== VaccinationSchemeVersionStatusEnum.VIGENTE) {
+      throw new BadRequestException(
+        'Una nueva versión debe crearse como VIGENTE.',
+      );
+    }
+
+    if (dto.validTo) {
+      throw new BadRequestException(
+        'Una nueva versión VIGENTE no debe cerrarse con validTo. Déjalo vacío para mantenerla abierta.',
+      );
+    }
+
+    const validFrom = this.parseDateOnly(dto.validFrom);
+    if (validFrom > this.todayDateOnly()) {
+      throw new BadRequestException(
+        'Una nueva versión VIGENTE no puede iniciar en una fecha futura. Crea la versión cuando realmente entre en vigor.',
+      );
+    }
+
     const existingVersion = await manager.getRepository(VaccinationSchemeVersion).findOne({
       where: {
         schemeId,
@@ -448,29 +594,41 @@ export class VaccinationService {
       }
     }
 
-    if ((dto.status ?? VaccinationSchemeVersionStatusEnum.VIGENTE) === VaccinationSchemeVersionStatusEnum.VIGENTE) {
-      const activeVersions = await manager.getRepository(VaccinationSchemeVersion).find({
-        where: {
-          schemeId,
-          deletedAt: IsNull(),
-          status: VaccinationSchemeVersionStatusEnum.VIGENTE,
-        } as never,
-      });
+    const activeVersions = await manager.getRepository(VaccinationSchemeVersion).find({
+      where: {
+        schemeId,
+        deletedAt: IsNull(),
+        status: VaccinationSchemeVersionStatusEnum.VIGENTE,
+      } as never,
+    });
 
-      for (const activeVersion of activeVersions) {
-        activeVersion.status = VaccinationSchemeVersionStatusEnum.REEMPLAZADO;
-        activeVersion.validTo = new Date(dto.validFrom);
-        await manager.getRepository(VaccinationSchemeVersion).save(activeVersion);
+    for (const activeVersion of activeVersions) {
+      const activeValidFrom = this.asDateOnly(activeVersion.validFrom)!;
+      if (validFrom <= activeValidFrom) {
+        throw new BadRequestException(
+          'La nueva versión debe iniciar después de la versión vigente actual para cerrar correctamente la anterior.',
+        );
       }
+
+      const previousDay = this.addDays(validFrom, -1);
+      if (previousDay < activeValidFrom) {
+        throw new BadRequestException(
+          'No se pudo cerrar la versión vigente anterior porque el rango de fechas quedaría inválido.',
+        );
+      }
+
+      activeVersion.status = VaccinationSchemeVersionStatusEnum.REEMPLAZADO;
+      activeVersion.validTo = previousDay;
+      await manager.getRepository(VaccinationSchemeVersion).save(activeVersion);
     }
 
     const savedVersion = await manager.getRepository(VaccinationSchemeVersion).save(
       manager.getRepository(VaccinationSchemeVersion).create({
         schemeId,
         version: dto.version,
-        status: dto.status ?? VaccinationSchemeVersionStatusEnum.VIGENTE,
-        validFrom: new Date(dto.validFrom),
-        validTo: dto.validTo ? new Date(dto.validTo) : null,
+        status: VaccinationSchemeVersionStatusEnum.VIGENTE,
+        validFrom,
+        validTo: null,
         changeReason: dto.changeReason?.trim() ?? null,
         revaccinationRule: dto.revaccinationRule?.trim() ?? null,
         generalIntervalDays: dto.generalIntervalDays ?? null,
@@ -544,6 +702,25 @@ export class VaccinationService {
     return vaccine;
   }
 
+  private async findVeterinarianEmployeeOrFail(employeeId: number): Promise<Employee> {
+    const employee = await this.employeeRepo.findOne({
+      where: { id: employeeId },
+      relations: ['person'],
+    });
+
+    if (!employee || employee.deletedAt) {
+      throw new NotFoundException('Empleado administrador de vacuna no encontrado.');
+    }
+
+    if (!employee.isVeterinarian) {
+      throw new BadRequestException(
+        'El empleado seleccionado no está habilitado como veterinario.',
+      );
+    }
+
+    return employee;
+  }
+
   private ensureVaccineMatchesPatientSpecies(vaccine: Vaccine, patient: Patient): void {
     if (vaccine.speciesId !== patient.speciesId) {
       throw new BadRequestException(
@@ -565,12 +742,18 @@ export class VaccinationService {
     };
   }
 
+  private formatEmployeeName(employee: Employee): string {
+    return employee.person
+      ? `${employee.person.firstName} ${employee.person.lastName}`.trim()
+      : employee.code ?? `Empleado ${employee.id}`;
+  }
+
   private toSchemeResponse(scheme: VaccinationScheme): VaccinationSchemeResponseDto {
     const versions = [...(scheme.versions ?? [])]
       .filter((version) => !version.deletedAt)
       .sort((a, b) => b.version - a.version);
     const activeVersion = versions.find(
-      (version) => version.status === VaccinationSchemeVersionStatusEnum.VIGENTE,
+      (version) => this.isVersionUsableToday(version),
     );
 
     return {
@@ -593,8 +776,8 @@ export class VaccinationService {
       id: version.id,
       version: version.version,
       status: version.status,
-      validFrom: version.validFrom.toISOString().split('T')[0],
-      validTo: version.validTo ? version.validTo.toISOString().split('T')[0] : null,
+      validFrom: this.toDateString(version.validFrom)!,
+      validTo: this.toDateString(version.validTo),
       changeReason: version.changeReason ?? null,
       revaccinationRule: version.revaccinationRule ?? null,
       generalIntervalDays: version.generalIntervalDays ?? null,
@@ -613,5 +796,77 @@ export class VaccinationService {
           notes: dose.notes ?? null,
         })),
     };
+  }
+
+  private toDateString(value: Date | string | null | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+
+    return String(value).split('T')[0];
+  }
+
+  private parseDateOnly(value: string): Date {
+    return new Date(`${value}T00:00:00.000Z`);
+  }
+
+  private asDateOnly(value: Date | string | null | undefined): Date | null {
+    const normalized = this.toDateString(value);
+    return normalized ? this.parseDateOnly(normalized) : null;
+  }
+
+  private todayDateOnly(): Date {
+    return this.parseDateOnly(this.toDateString(new Date())!);
+  }
+
+  private addDays(value: Date, days: number): Date {
+    const adjusted = new Date(value);
+    adjusted.setUTCDate(adjusted.getUTCDate() + days);
+    return adjusted;
+  }
+
+  private isVersionUsableToday(version: VaccinationSchemeVersion): boolean {
+    if (version.status !== VaccinationSchemeVersionStatusEnum.VIGENTE) {
+      return false;
+    }
+
+    const today = this.todayDateOnly();
+    const validFrom = this.asDateOnly(version.validFrom);
+    const validTo = this.asDateOnly(version.validTo);
+
+    if (!validFrom) {
+      return false;
+    }
+
+    return validFrom <= today && (!validTo || validTo >= today);
+  }
+
+  private async hasOtherUsableVersionForSpecies(
+    speciesId: number,
+    excludedVersionId: number,
+    manager: EntityManager,
+  ): Promise<boolean> {
+    const count = await manager
+      .getRepository(VaccinationSchemeVersion)
+      .createQueryBuilder('version')
+      .innerJoin('version.scheme', 'scheme')
+      .where('scheme.species_id = :speciesId', { speciesId })
+      .andWhere('scheme.deleted_at IS NULL')
+      .andWhere('scheme.is_active = true')
+      .andWhere('version.deleted_at IS NULL')
+      .andWhere('version.is_active = true')
+      .andWhere('version.status = :status', {
+        status: VaccinationSchemeVersionStatusEnum.VIGENTE,
+      })
+      .andWhere('version.id <> :excludedVersionId', { excludedVersionId })
+      .andWhere('version.valid_from <= CURRENT_DATE')
+      .andWhere('(version.valid_to IS NULL OR version.valid_to >= CURRENT_DATE)')
+      .getCount();
+
+    return count > 0;
   }
 }
