@@ -3,7 +3,7 @@ import PDFDocument from 'pdfkit';
 
 const BRAND = '#134e4a';
 const BRAND_ALT = '#0f766e';
-const BRAND_SOFT = '#ecfeff';
+const BRAND_SOFT = '#f3f4f6';
 const BORDER = '#cbd5e1';
 const TEXT = '#111827';
 const MUTED = '#6b7280';
@@ -82,33 +82,17 @@ function drawPageHeader(doc: any, patientName: string, continuation = false): vo
   doc
     .fillColor(WHITE)
     .font('Helvetica-Bold')
-    .fontSize(18)
-    .text('PetSafe', doc.page.margins.left, 16);
-  doc
-    .fillColor('#99f6e4')
-    .font('Helvetica')
-    .fontSize(9)
-    .text(
-      continuation ? 'Continuacion del historial clinico' : 'Reporte PDF del historial clinico',
-      doc.page.margins.left,
-      39,
-    );
+    .fontSize(16)
+    .text('PetSafe', doc.page.margins.left, 26, {
+      lineBreak: false,
+    });
   doc
     .fillColor(WHITE)
     .font('Helvetica-Bold')
     .fontSize(13)
-    .text('Historia clinica del paciente', 0, 18, {
-      align: 'right',
-      width: doc.page.width - doc.page.margins.right,
-      lineBreak: false,
-    });
-  doc
-    .fillColor('#99f6e4')
-    .font('Helvetica')
-    .fontSize(9)
-    .text(patientName, 0, 39, {
-      align: 'right',
-      width: doc.page.width - doc.page.margins.right,
+    .text('Historia clinica', 0, 27, {
+      align: 'center',
+      width: doc.page.width,
       lineBreak: false,
     });
 
@@ -117,56 +101,48 @@ function drawPageHeader(doc: any, patientName: string, continuation = false): vo
 }
 
 function drawPrimarySectionTitle(doc: any, title: string, patientName: string): void {
-  ensureSpace(doc, 26, patientName);
+  ensureSpace(doc, 30, patientName);
   const y = doc.y;
-  doc.rect(doc.page.margins.left, y, sectionWidth(doc), 18).fill(BRAND_SOFT);
+  doc.rect(doc.page.margins.left, y, sectionWidth(doc), 20).fill(BRAND_SOFT);
   doc
-    .fillColor(BRAND)
+    .fillColor(TEXT)
     .font('Helvetica-Bold')
-    .fontSize(9.1)
+    .fontSize(10.3)
     .text(title, doc.page.margins.left + 8, y + 4, { lineBreak: false });
   doc.fillColor(TEXT);
-  doc.y = y + 32;
+  doc.y = y + 38;
 }
 
 function drawVisitHeader(doc: any, title: string, meta: string, patientName: string): void {
-  ensureSpace(doc, 56, patientName);
+  ensureSpace(doc, 28, patientName);
   const y = doc.y;
-  doc.roundedRect(doc.page.margins.left, y, sectionWidth(doc), 42, 10).fill(BRAND_ALT);
   doc
-    .fillColor(WHITE)
+    .fillColor(TEXT)
     .font('Helvetica-Bold')
-    .fontSize(10.2)
-    .text(title, doc.page.margins.left + 12, y + 9, { lineBreak: false });
+    .fontSize(10.1)
+    .text(title, doc.page.margins.left, y, { lineBreak: false });
   doc
-    .fillColor('#d1fae5')
+    .fillColor(MUTED)
     .font('Helvetica')
-    .fontSize(8.5)
-    .text(meta, doc.page.margins.left + 12, y + 24, {
-      width: sectionWidth(doc) - 24,
-      lineBreak: false,
+    .fontSize(8.1)
+    .text(meta, doc.page.margins.left, y + 14, {
+      width: sectionWidth(doc),
     });
   doc.fillColor(TEXT);
-  doc.y = y + 58;
+  doc.y = y + 34;
 }
 
 function drawVisitSectionTitle(doc: any, title: string, patientName: string, left: number): void {
-  ensureSpace(doc, 20, patientName);
+  ensureSpace(doc, 22, patientName);
   const y = doc.y;
   doc.rect(left, y + 1, 4, 12).fill(BRAND_ALT);
   doc
     .fillColor(TEXT)
     .font('Helvetica-Bold')
-    .fontSize(9)
+    .fontSize(9.1)
     .text(title, left + 10, y, { lineBreak: false });
-  doc
-    .moveTo(left + 10, y + 14)
-    .lineTo(doc.page.width - doc.page.margins.right, y + 14)
-    .strokeColor(BORDER)
-    .lineWidth(0.7)
-    .stroke();
   doc.fillColor(TEXT);
-  doc.y = y + 24;
+  doc.y = y + 28;
 }
 
 function measureCellHeight(doc: any, text: string, width: number): number {
@@ -222,7 +198,7 @@ function drawGrid(
     doc.y = rowY + rowHeight;
   }
 
-  doc.moveDown(0.5);
+  doc.moveDown(0.8);
 }
 
 function drawParagraph(
@@ -250,7 +226,7 @@ function drawParagraph(
     .text(printableValue, left, doc.y + 3, {
       width: sectionWidth(doc, left),
     });
-  doc.moveDown(0.75);
+  doc.moveDown(0.95);
 }
 
 function drawBulletList(
@@ -287,7 +263,7 @@ function drawEmptySection(doc: any, patientName: string, left = doc.page.margins
       width: sectionWidth(doc, left),
     });
   doc.fillColor(TEXT);
-  doc.moveDown(0.55);
+  doc.moveDown(0.85);
 }
 
 export interface FullPdfPatient {
