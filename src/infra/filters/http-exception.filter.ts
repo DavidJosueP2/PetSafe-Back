@@ -13,7 +13,7 @@ import {
   ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN,
 } from '../../domain/constants/encounter-clinical-exam.constants.js';
 
-// ── Response shape ───────────────────────────────────
+// ── Response shape ───────────────────────────────────-
 interface ErrorResponse {
   statusCode: number;
   message: string | string[];
@@ -22,7 +22,7 @@ interface ErrorResponse {
   path: string;
 }
 
-// ── PostgreSQL error‐code → friendly response ───────
+// ── PostgreSQL error‐code → friendly response ───────-
 interface PgErrorMapping {
   status: number;
   error: string;
