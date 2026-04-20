@@ -1,10 +1,22 @@
 import {
   PatientConditionResponseDto,
-  PatientSurgeryResponseDto,
   PatientTutorResponseDto,
 } from './patient-response.dto.js';
 import { PatientImageResponseDto } from './patient-image.dto.js';
 import { ClinicalCaseSummaryDto } from '../clinical-cases/clinical-case-response.dto.js';
+
+export type PatientSurgeryResponseDto = {
+  id: number;
+  encounterId: number | null;
+  catalogId: number | null;
+  surgeryType: string;
+  scheduledDate: string | null;
+  performedDate: string | null;
+  surgeryStatus: string;
+  isExternal: boolean;
+  description: string | null;
+  postoperativeInstructions: string | null;
+};
 
 export type PatientBasicByClientResponse = {
   id: number;
@@ -61,6 +73,7 @@ export type PatientAdminBasicResponse = {
 export type PatientAdminBasicDetailResponse = {
   id: number;
   name: string;
+  qrToken: string | null;
   species: {
     id: number;
     name: string;
@@ -135,4 +148,5 @@ export type PatientRecentActivityResponse = {
   consultations: PatientRecentConsultationActivityResponse[];
   procedures: PatientRecentProcedureActivityResponse[];
   surgeries: PatientRecentSurgeryActivityResponse[];
+  recentActivity: null;
 };

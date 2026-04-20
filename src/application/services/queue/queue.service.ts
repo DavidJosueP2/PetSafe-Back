@@ -119,7 +119,7 @@ export class QueueService {
     private readonly employeeRepo: Repository<Employee>,
     @InjectRepository(MediaFile)
     private readonly mediaFileRepo: Repository<MediaFile>,
-  ) {}
+  ) { }
 
   private async syncCancelledAppointmentsIntoQueue(): Promise<void> {
     await this.queueRepo.query(
@@ -370,8 +370,11 @@ export class QueueService {
     const page = Math.max(query.page ?? 1, 1);
     const limit = Math.min(Math.max(query.limit ?? 15, 1), 100);
 
-    // Query para el summary (todo el día, sin filtros de status/search)
-    const allQb = this.baseQb().andWhere('"q"."date" = :date', { date: targetDate });
+    // Query para el summary (todo el día + entradas activas de días anteriores)
+    const allQb = this.baseQb().andWhere(
+      '("q"."date" = :date OR "q"."status" IN (:...activeStatuses))',
+      { date: targetDate, activeStatuses: [QueueStatusEnum.EN_ATENCION, QueueStatusEnum.EN_ESPERA] },
+    );
     if (query.veterinarianId) {
       allQb.andWhere('"q"."vet_id" = :veterinarianId', {
         veterinarianId: query.veterinarianId,
@@ -394,7 +397,10 @@ export class QueueService {
     const summary = this.buildSummary(allDtos);
 
     // Query filtrada para la lista paginada
-    const filteredQb = this.baseQb().andWhere('"q"."date" = :date', { date: targetDate });
+    const filteredQb = this.baseQb().andWhere(
+      '("q"."date" = :date OR "q"."status" IN (:...activeStatuses))',
+      { date: targetDate, activeStatuses: [QueueStatusEnum.EN_ATENCION, QueueStatusEnum.EN_ESPERA] },
+    );
 
     if (query.veterinarianId) {
       filteredQb.andWhere('"q"."vet_id" = :veterinarianId', {
@@ -456,34 +462,26 @@ export class QueueService {
     return response;
   }
 
-  async findOne(id: number): Promise<QueueEntryRecordDto> {
-    return this.findOneDto(id);
-  }
-
-  async findByEncounter(encounterId: number): Promise<QueueEntryRecordDto> {
-    const encounter = await this.encounterRepo.findOne({
-      where: { id: encounterId },
-    });
-
-    if (!encounter || encounter.deletedAt) {
-      throw new NotFoundException('Consulta clínica no encontrada.');
-    }
-
-    if (encounter.queueEntryId === null) {
-      throw new NotFoundException(
-        'La consulta clínica no tiene una entrada operativa vinculada.',
-      );
-    }
-
-    return this.findOneDto(encounter.queueEntryId);
-  }
-
   // ── POST /queue ──
   async create(dto: CreateQueueEntryDto, userId: number): Promise<QueueEntryRecordDto> {
     // 1) Validar paciente
     const patient = await this.patientRepo.findOne({ where: { id: dto.patientId } });
     if (!patient || patient.deletedAt) {
       throw new NotFoundException('Paciente no encontrado.');
+    }
+
+    // 1b) Verificar que el paciente no tenga ya una entrada activa hoy
+    const today = formatDate(new Date());
+    const existingActive = await this.queueRepo.findOne({
+      where: [
+        { patientId: dto.patientId, date: today as unknown as Date, status: QueueStatusEnum.EN_ESPERA },
+        { patientId: dto.patientId, date: today as unknown as Date, status: QueueStatusEnum.EN_ATENCION },
+      ],
+    });
+    if (existingActive && !existingActive.deletedAt) {
+      throw new BadRequestException(
+        'El paciente ya se encuentra en la lista de espera de hoy.',
+      );
     }
 
     let linkedAppointment: Appointment | null = null;
@@ -573,6 +571,16 @@ export class QueueService {
     }
     if (entry.status !== QueueStatusEnum.EN_ESPERA) {
       throw new BadRequestException('Solo se puede iniciar una atención que esté en espera.');
+    }
+
+    // Verificar que el mismo paciente no tenga ya otra entrada EN_ATENCION hoy
+    const activeAttention = await this.queueRepo.findOne({
+      where: { patientId: entry.patientId, status: QueueStatusEnum.EN_ATENCION, date: entry.date },
+    });
+    if (activeAttention && activeAttention.id !== id) {
+      throw new BadRequestException(
+        'El paciente ya tiene una atención en curso.',
+      );
     }
 
     if (entry.appointmentId) {

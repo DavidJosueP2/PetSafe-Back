@@ -21,7 +21,10 @@ import { ClinicalCasesModule } from './application/modules/clinical-cases/clinic
 
 import { UsersModule } from './application/modules/users/users.module.js';
 import { ProcedureSurgeryCatalogModule } from './application/modules/catalogs/procedure-surgery-catalog.module.js';
+import { TreatmentsModule } from './application/modules/treatments/treatments.module.js';
+import { ProceduresModule } from './application/modules/procedures/procedures.module.js';
 import { HealthController } from './presentation/controllers/health/health.controller.js';
+import { PublicPatientsModule } from './application/modules/public/public-patients.module.js';
 
 @Module({
   imports: [
@@ -45,6 +48,9 @@ import { HealthController } from './presentation/controllers/health/health.contr
     VaccinationModule,
     ClinicalCasesModule,
     ProcedureSurgeryCatalogModule,
+    TreatmentsModule,
+    ProceduresModule,
+    PublicPatientsModule,
   ],
   controllers: [HealthController],
   providers: [],
