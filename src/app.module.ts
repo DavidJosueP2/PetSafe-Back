@@ -23,6 +23,7 @@ import { ProcedureSurgeryCatalogModule } from './application/modules/catalogs/pr
 import { TreatmentsModule } from './application/modules/treatments/treatments.module.js';
 import { ProceduresModule } from './application/modules/procedures/procedures.module.js';
 import { HealthController } from './presentation/controllers/health/health.controller.js';
+import { PublicPatientsModule } from './application/modules/public/public-patients.module.js';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { HealthController } from './presentation/controllers/health/health.contr
     ProcedureSurgeryCatalogModule,
     TreatmentsModule,
     ProceduresModule,
+    PublicPatientsModule,
   ],
   controllers: [HealthController],
   providers: [],

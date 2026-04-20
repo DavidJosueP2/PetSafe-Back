@@ -8,6 +8,7 @@ import { Repository, DataSource, EntityManager, IsNull } from 'typeorm';
 import { paginate, PaginateQuery, PaginateConfig, Paginated } from 'nestjs-paginate';
 import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientTutor } from '../../../domain/entities/patients/patient-tutor.entity.js';
@@ -154,6 +155,7 @@ export class PatientsService {
           distinguishingMarks: dto.distinguishingMarks ?? null,
           generalAllergies: dto.generalAllergies ?? null,
           generalHistory: dto.generalHistory ?? null,
+          qrToken: randomUUID(),
         });
         const saved = await manager.save(Patient, patient);
 
@@ -192,6 +194,7 @@ export class PatientsService {
           distinguishingMarks: dto.distinguishingMarks ?? null,
           generalAllergies: dto.generalAllergies ?? null,
           generalHistory: dto.generalHistory ?? null,
+          qrToken: randomUUID(),
         });
         const saved = await manager.save(Patient, patient);
 
@@ -829,6 +832,7 @@ export class PatientsService {
     return {
       id: patient.id,
       name: patient.name,
+      qrToken: patient.qrToken ?? null,
       species: patient.species
         ? {
           id: patient.species.id,

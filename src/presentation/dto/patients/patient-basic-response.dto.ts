@@ -59,6 +59,7 @@ export type PatientAdminBasicResponse = {
 export type PatientAdminBasicDetailResponse = {
   id: number;
   name: string;
+  qrToken: string | null;
   species: {
     id: number;
     name: string;

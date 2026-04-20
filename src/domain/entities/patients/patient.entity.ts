@@ -75,6 +75,9 @@ export class Patient extends BaseAuditEntity {
   @Column({ name: 'general_history', type: 'text', nullable: true })
   generalHistory!: string | null;
 
+  @Column({ name: 'qr_token', type: 'uuid', unique: true, nullable: true })
+  qrToken!: string | null;
+
   @OneToMany('PatientTutor', 'patient')
   tutors!: PatientTutor[];
 
