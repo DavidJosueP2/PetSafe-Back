@@ -29,8 +29,10 @@ import { PatientResponseDto, PatientConditionResponseDto } from '../../../presen
 import {
   PatientAdminBasicDetailResponse,
   PatientAdminBasicResponse,
+  PatientActiveTreatmentResponse,
   PatientBasicByClientResponse,
   PaginatedPatientsBasicForAdminResponse,
+  PatientTreatmentHistoryResponse,
   PatientProcedureHistoryResponse,
   PatientRecentActivityResponse,
   PatientRecentConsultationActivityResponse,
@@ -52,9 +54,11 @@ import { PATIENT_UPLOADS_DIR } from '../../../infra/config/uploads.config.js';
 import { VaccinationPlanService } from '../vaccinations/vaccination-plan.service.js';
 import { ClinicalCasesService } from '../clinical-cases/clinical-cases.service.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
+import { Treatment } from '../../../domain/entities/encounters/treatment.entity.js';
 import { PatientVaccinationPlan } from '../../../domain/entities/vaccinations/patient-vaccination-plan.entity.js';
 import { EncounterMapper } from '../../mappers/encounter.mapper.js';
 import { PatientClinicalHistoryResponse } from '../../../presentation/dto/patients/patient-clinical-history-response.dto.js';
+import { TreatmentStatusEnum } from '../../../domain/enums/index.js';
 
 const PAGINATE_CONFIG: PaginateConfig<Patient> = {
   sortableColumns: ['id', 'name', 'code', 'createdAt'],
@@ -819,9 +823,11 @@ export class PatientsService {
 
   async findAdminBasic(patientId: number, roles: string[]): Promise<PatientAdminBasicDetailResponse> {
     const patient = await this.findOneInternal(patientId, 0, undefined, roles);
-    const recentActivity = await this.buildRecentActivity(patientId);
+    const recentActivity = await this.buildActivity(patientId);
     const procedures = await this.buildProcedureHistory(patientId);
     const surgeries = await this.buildSurgeryHistory(patientId);
+    const activeTreatments = await this.buildActiveTreatmentHistory(patientId);
+    const treatments = await this.buildTreatmentHistory(patientId);
     const clinicalCases = await this.clinicalCasesService.listByPatient(patientId);
     const birthDate = patient.birthDate ?? null;
     const birthDateValue = birthDate ? new Date(birthDate as any) : null;
@@ -874,6 +880,8 @@ export class PatientsService {
       tutors: patient.tutors ?? [],
       clinicalObservations: patient.conditions ?? [],
       surgeries,
+      activeTreatments,
+      treatments,
       procedures,
       clinicalCases,
       recentActivity,
@@ -885,10 +893,34 @@ export class PatientsService {
     return this.clinicalCasesService.listByPatient(patientId);
   }
 
-  private async buildRecentActivity(patientId: number): Promise<PatientRecentActivityResponse> {
-    const windowEnd = new Date();
-    const windowStart = new Date(windowEnd);
-    windowStart.setMonth(windowStart.getMonth() - 1);
+  async findActivity(
+    patientId: number,
+    roles: string[],
+    from?: string | null,
+    to?: string | null,
+  ): Promise<PatientRecentActivityResponse> {
+    await this.ensurePatientAccessibleForStaff(patientId, roles);
+    return this.buildActivity(patientId, from ?? null, to ?? null);
+  }
+
+  private async buildActivity(
+    patientId: number,
+    from?: string | null,
+    to?: string | null,
+  ): Promise<PatientRecentActivityResponse> {
+    const now = new Date();
+    const parsedFrom = this.parseActivityBoundary(from, 'start');
+    const parsedTo = this.parseActivityBoundary(to, 'end');
+    const windowEnd = parsedTo ?? now;
+    const windowStart = parsedFrom ?? (() => {
+      const fallback = new Date(windowEnd);
+      fallback.setMonth(fallback.getMonth() - 1);
+      return fallback;
+    })();
+
+    if (windowStart.getTime() > windowEnd.getTime()) {
+      throw new BadRequestException('La fecha inicial no puede ser mayor que la fecha final.');
+    }
 
     const encounterRepo = this.dataSource.getRepository(Encounter);
     const consultationNumbers = await this.buildPatientConsultationNumberMap(patientId);
@@ -908,7 +940,7 @@ export class PatientsService {
       const start = encounter.startTime instanceof Date
         ? encounter.startTime
         : new Date(encounter.startTime);
-      return !Number.isNaN(start.getTime()) && start >= windowStart;
+      return !Number.isNaN(start.getTime()) && start >= windowStart && start <= windowEnd;
     });
 
     const consultations: PatientRecentConsultationActivityResponse[] = recentEncounters.map((encounter) => ({
@@ -975,6 +1007,47 @@ export class PatientsService {
     };
   }
 
+  private async buildTreatmentHistory(
+    patientId: number,
+  ): Promise<PatientTreatmentHistoryResponse[]> {
+    const treatmentRepo = this.dataSource.getRepository(Treatment);
+    const consultationNumbers = await this.buildPatientConsultationNumberMap(patientId);
+    const treatments = await treatmentRepo
+      .createQueryBuilder('treatment')
+      .innerJoinAndSelect(
+        'treatment.encounter',
+        'encounter',
+        'encounter.patient_id = :patientId AND encounter.deleted_at IS NULL',
+        { patientId },
+      )
+      .leftJoinAndSelect('treatment.items', 'items')
+      .leftJoinAndSelect('treatment.clinicalCase', 'clinicalCase')
+      .where('treatment.deleted_at IS NULL')
+      .orderBy('treatment.start_date', 'DESC')
+      .addOrderBy('treatment.id', 'DESC')
+      .getMany();
+
+    return treatments.map((treatment) => ({
+      id: treatment.id,
+      encounterId: treatment.encounterId,
+      patientConsultationNumber: consultationNumbers.get(treatment.encounterId) ?? 0,
+      clinicalCaseId: treatment.clinicalCaseId ?? null,
+      clinicalCaseProblem: treatment.clinicalCase?.problemSummary?.trim() || null,
+      status: treatment.status,
+      summary: this.buildTreatmentSummary(treatment),
+      startDate:
+        treatment.startDate instanceof Date
+          ? treatment.startDate.toISOString()
+          : String(treatment.startDate),
+      endDate: treatment.endDate
+        ? treatment.endDate instanceof Date
+          ? treatment.endDate.toISOString()
+          : String(treatment.endDate)
+        : null,
+      generalInstructions: treatment.generalInstructions ?? null,
+    }));
+  }
+
   private async buildProcedureHistory(patientId: number): Promise<PatientProcedureHistoryResponse[]> {
     const encounterRepo = this.dataSource.getRepository(Encounter);
     const consultationNumbers = await this.buildPatientConsultationNumberMap(patientId);
@@ -1003,6 +1076,46 @@ export class PatientsService {
           })),
       )
       .sort((left, right) => right.performedDate.localeCompare(left.performedDate));
+  }
+
+  private async buildActiveTreatmentHistory(
+    patientId: number,
+  ): Promise<PatientActiveTreatmentResponse[]> {
+    const treatmentRepo = this.dataSource.getRepository(Treatment);
+    const treatments = await treatmentRepo
+      .createQueryBuilder('treatment')
+      .innerJoinAndSelect(
+        'treatment.encounter',
+        'encounter',
+        'encounter.patient_id = :patientId AND encounter.deleted_at IS NULL',
+        { patientId },
+      )
+      .leftJoinAndSelect('treatment.items', 'items')
+      .leftJoinAndSelect('treatment.clinicalCase', 'clinicalCase')
+      .where('treatment.deleted_at IS NULL')
+      .andWhere('treatment.status = :status', { status: TreatmentStatusEnum.ACTIVO })
+      .orderBy('treatment.start_date', 'DESC')
+      .addOrderBy('treatment.id', 'DESC')
+      .getMany();
+
+    return treatments.map((treatment) => ({
+      id: treatment.id,
+      encounterId: treatment.encounterId,
+      clinicalCaseId: treatment.clinicalCaseId ?? null,
+      clinicalCaseProblem: treatment.clinicalCase?.problemSummary?.trim() || null,
+      status: treatment.status,
+      summary: this.buildTreatmentSummary(treatment),
+      startDate:
+        treatment.startDate instanceof Date
+          ? treatment.startDate.toISOString()
+          : String(treatment.startDate),
+      endDate: treatment.endDate
+        ? treatment.endDate instanceof Date
+          ? treatment.endDate.toISOString()
+          : String(treatment.endDate)
+        : null,
+      generalInstructions: treatment.generalInstructions ?? null,
+    }));
   }
 
   private async buildSurgeryHistory(patientId: number): Promise<PatientSurgeryResponseDto[]> {
@@ -1064,6 +1177,43 @@ export class PatientsService {
     const lastName = encounter.vet?.person?.lastName?.trim() ?? '';
     const fullName = `${firstName} ${lastName}`.trim();
     return fullName || null;
+  }
+
+  private parseActivityBoundary(
+    value: string | null | undefined,
+    mode: 'start' | 'end',
+  ): Date | null {
+    const trimmed = value?.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const candidate = new Date(trimmed.length <= 10
+      ? `${trimmed}${mode === 'start' ? 'T00:00:00.000Z' : 'T23:59:59.999Z'}`
+      : trimmed);
+
+    if (Number.isNaN(candidate.getTime())) {
+      throw new BadRequestException(`La fecha ${mode === 'start' ? 'inicial' : 'final'} no es válida.`);
+    }
+
+    return candidate;
+  }
+
+  private buildTreatmentSummary(treatment: Treatment): string {
+    const medicationNames = (treatment.items ?? [])
+      .filter((item) => !item.deletedAt)
+      .map((item) => item.medication?.trim())
+      .filter((value): value is string => Boolean(value));
+
+    if (medicationNames.length === 1) {
+      return medicationNames[0];
+    }
+
+    if (medicationNames.length > 1) {
+      return `${medicationNames[0]} + ${medicationNames.length - 1} más`;
+    }
+
+    return treatment.generalInstructions?.trim() || `Tratamiento #${treatment.id}`;
   }
 
   async updateAdminBasic(

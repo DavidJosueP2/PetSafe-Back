@@ -195,6 +195,16 @@ export class EncounterPatientResponseDto {
   breed!: string;
 }
 
+export class EncounterAttachmentResponseDto {
+  id!: number;
+  url!: string;
+  originalName!: string;
+  mimeType!: string | null;
+  sizeBytes!: number | null;
+  mediaType!: string;
+  createdAt!: string;
+}
+
 // ── Main response ──────────────────────────────────────────────────────────
 
 export class EncounterResponseDto {

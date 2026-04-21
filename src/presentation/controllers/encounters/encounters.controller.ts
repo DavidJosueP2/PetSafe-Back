@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Post,
   Put,
@@ -9,8 +10,11 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Request,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { EncountersService } from '../../../application/services/encounters/encounters.service.js';
 import { CreateEncounterDto } from '../../dto/encounters/create-encounter.dto.js';
@@ -28,6 +32,10 @@ import { CreateSurgeryDto } from '../../dto/encounters/create-surgery.dto.js';
 import { CreateProcedureDto } from '../../dto/encounters/create-procedure.dto.js';
 import { UpsertVaccinationDraftDto } from '../../dto/encounters/upsert-vaccination-draft.dto.js';
 import { UpsertTreatmentReviewDraftDto } from '../../dto/encounters/upsert-treatment-review-draft.dto.js';
+import {
+  encounterFileUploadOptions,
+  ENCOUNTER_UPLOADS_URL_PREFIX,
+} from '../../../infra/config/uploads.config.js';
 
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
@@ -308,5 +316,39 @@ export class EncountersController {
     @Param('draftId', ParseIntPipe) draftId: number,
   ) {
     return this.encountersService.deleteProcedureDraft(id, draftId);
+  }
+
+  // ── Attachments (archivos adjuntos) ────────────────────────────────────────
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Get(':id/attachments')
+  listAttachments(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}${ENCOUNTER_UPLOADS_URL_PREFIX}`;
+    return this.encountersService.listAttachments(id, baseUrl);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Post(':id/attachments')
+  @UseInterceptors(FileInterceptor('file', encounterFileUploadOptions))
+  uploadAttachment(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: any,
+    @Request() req: any,
+  ) {
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}${ENCOUNTER_UPLOADS_URL_PREFIX}`;
+    return this.encountersService.uploadAttachment(id, file, req.user?.userId ?? null, baseUrl);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Delete(':id/attachments/:fileId')
+  deleteAttachment(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('fileId', ParseIntPipe) fileId: number,
+  ) {
+    return this.encountersService.deleteAttachment(id, fileId);
   }
 }
