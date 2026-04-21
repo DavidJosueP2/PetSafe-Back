@@ -235,6 +235,18 @@ export class PatientsController {
   ) {
     return this.patientsService.findClinicalCases(id, req.user.roles ?? []);
   }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('admin/:id/activity')
+  findActivity(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('from') from: string | undefined,
+    @Query('to') to: string | undefined,
+    @Request() req: { user: { roles: string[] } },
+  ) {
+    return this.patientsService.findActivity(id, req.user.roles ?? [], from, to);
+  }
+
   // Historial clínico completo de un paciente
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/:id/clinical-history')

@@ -45,6 +45,7 @@ import { PatientVaccinationPlanDose } from '../../../domain/entities/vaccination
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
 import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { User } from '../../../domain/entities/auth/user.entity.js';
+import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { User } from '../../../domain/entities/auth/user.entity.js';
       UserRole,
       Employee,
       User,
+      MediaFile,
     ]),
   ],
   controllers: [EncountersController],

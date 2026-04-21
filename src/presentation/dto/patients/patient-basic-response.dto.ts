@@ -97,6 +97,8 @@ export type PatientAdminBasicDetailResponse = {
   tutors: PatientTutorResponseDto[];
   clinicalObservations: PatientConditionResponseDto[];
   surgeries: PatientSurgeryResponseDto[];
+  activeTreatments: PatientActiveTreatmentResponse[];
+  treatments: PatientTreatmentHistoryResponse[];
   procedures: PatientProcedureHistoryResponse[];
   clinicalCases: ClinicalCaseSummaryDto[];
   recentActivity: PatientRecentActivityResponse;
@@ -130,6 +132,31 @@ export type PatientProcedureHistoryResponse = {
   description: string | null;
   result: string | null;
   notes: string | null;
+};
+
+export type PatientActiveTreatmentResponse = {
+  id: number;
+  encounterId: number;
+  clinicalCaseId: number | null;
+  clinicalCaseProblem: string | null;
+  status: string;
+  summary: string;
+  startDate: string;
+  endDate: string | null;
+  generalInstructions: string | null;
+};
+
+export type PatientTreatmentHistoryResponse = {
+  id: number;
+  encounterId: number;
+  patientConsultationNumber: number;
+  clinicalCaseId: number | null;
+  clinicalCaseProblem: string | null;
+  status: string;
+  summary: string;
+  startDate: string;
+  endDate: string | null;
+  generalInstructions: string | null;
 };
 
 export type PatientRecentSurgeryActivityResponse = {
