@@ -25,6 +25,8 @@ import { TreatmentsModule } from './application/modules/treatments/treatments.mo
 import { ProceduresModule } from './application/modules/procedures/procedures.module.js';
 import { HealthController } from './presentation/controllers/health/health.controller.js';
 import { PublicPatientsModule } from './application/modules/public/public-patients.module.js';
+import { NotificationsModule } from './application/modules/notifications/notifications.module.js';
+import { AppointmentRequestsModule } from './application/modules/appointment-requests/appointment-requests.module.js';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { PublicPatientsModule } from './application/modules/public/public-patien
     TreatmentsModule,
     ProceduresModule,
     PublicPatientsModule,
+    NotificationsModule,
+    AppointmentRequestsModule,
   ],
   controllers: [HealthController],
   providers: [],

@@ -218,3 +218,10 @@ export enum AdoptionStatusEnum {
   ADOPTADO = 'ADOPTADO',
   CANCELADO = 'CANCELADO',
 }
+
+export enum AppointmentRequestStatusEnum {
+  PENDIENTE = 'PENDIENTE',
+  CONFIRMADA = 'CONFIRMADA',
+  RECHAZADA = 'RECHAZADA',
+  CANCELADA = 'CANCELADA',
+}
