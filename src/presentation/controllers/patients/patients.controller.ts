@@ -100,6 +100,16 @@ export class PatientsController {
     return this.patientsService.findAllByUser(query, req.user.userId);
   }
 
+  /** Cliente: historial simplificado de su mascota */
+  @Roles(RoleEnum.CLIENTE_APP)
+  @Get(':id/client-history')
+  findClientHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { userId: number } },
+  ) {
+    return this.patientsService.findClientHistory(id, req.user.userId);
+  }
+
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
   @Get(':id')
   findOne(
@@ -248,13 +258,13 @@ export class PatientsController {
   }
 
   // Historial clínico completo de un paciente
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
   @Get('admin/:id/clinical-history')
   findClinicalHistory(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: { user: { userId: number; roles: string[] } },
   ): Promise<PatientClinicalHistoryResponse> {
-    return this.patientsService.findClinicalHistory(id, req.user.roles);
+    return this.patientsService.findClinicalHistory(id, req.user.userId, req.user.roles ?? []);
   }
 
   // Actualizar campos basicos de un paciente

@@ -821,8 +821,12 @@ export class PatientsService {
     };
   }
 
-  async findAdminBasic(patientId: number, roles: string[]): Promise<PatientAdminBasicDetailResponse> {
-    const patient = await this.findOneInternal(patientId, 0, undefined, roles);
+  async findAdminBasic(
+    patientId: number,
+    roles: string[],
+    userId = 0,
+  ): Promise<PatientAdminBasicDetailResponse> {
+    const patient = await this.findOneInternal(patientId, userId, undefined, roles);
     const recentActivity = await this.buildActivity(patientId);
     const procedures = await this.buildProcedureHistory(patientId);
     const surgeries = await this.buildSurgeryHistory(patientId);
@@ -1419,8 +1423,61 @@ export class PatientsService {
     await mediaRepo.save(mediaFile);
   }
 
-  async findClinicalHistory(patientId: number, roles: string[]): Promise<PatientClinicalHistoryResponse> {
-    const patient = await this.findAdminBasic(patientId, roles);
+  async findClientHistory(patientId: number, userId: number): Promise<object> {
+    // Verify patient belongs to user via tutor relationship
+    const belongs = await this.patientTutorRepo
+      .createQueryBuilder('pt')
+      .innerJoin('clients', 'c', 'c.id = pt.client_id AND c.deleted_at IS NULL')
+      .innerJoin('persons', 'per', 'per.id = c.person_id AND per.deleted_at IS NULL')
+      .innerJoin('users', 'u', 'u.person_id = per.id AND u.deleted_at IS NULL')
+      .where('pt.patient_id = :patientId', { patientId })
+      .andWhere('u.id = :userId', { userId })
+      .andWhere('pt.deleted_at IS NULL')
+      .getCount();
+
+    if (!belongs) throw new NotFoundException('Paciente no encontrado.');
+
+    const encounterRepo = this.dataSource.getRepository(Encounter);
+    const encounters = await encounterRepo.find({
+      where: { patientId, deletedAt: IsNull() },
+      relations: ['vet', 'vet.person', 'consultationReason', 'treatments', 'treatments.items', 'vaccinationEvents', 'vaccinationEvents.vaccine', 'dewormingEvents'],
+      order: { startTime: 'DESC' },
+      take: 30,
+    });
+
+    return {
+      encounters: encounters.map((e) => ({
+        id: e.id,
+        startTime: e.startTime instanceof Date ? e.startTime.toISOString() : String(e.startTime),
+        endTime: e.endTime ? (e.endTime instanceof Date ? e.endTime.toISOString() : String(e.endTime)) : null,
+        status: e.status,
+        generalNotes: e.generalNotes ?? null,
+        vetName: e.vet?.person ? `${e.vet.person.firstName} ${e.vet.person.lastName}`.trim() : null,
+        consultationReason: e.consultationReason?.consultationReason ?? null,
+        treatmentsCount: (e.treatments ?? []).length,
+        vaccinationsCount: (e.vaccinationEvents ?? []).length,
+        dewormingsCount: (e.dewormingEvents ?? []).length,
+        treatments: (e.treatments ?? []).map((t) => ({
+          id: t.id,
+          name: t.items?.[0]?.medication ?? 'Tratamiento',
+          status: t.status,
+          startDate: t.startDate ? (t.startDate instanceof Date ? t.startDate.toISOString() : String(t.startDate)) : null,
+        })),
+        vaccinations: (e.vaccinationEvents ?? []).map((v) => ({
+          id: v.id,
+          vaccineName: v.vaccine?.name ?? null,
+          batchNumber: v.patientVaccineRecord?.batchNumber ?? null,
+        })),
+      })),
+    };
+  }
+
+  async findClinicalHistory(
+    patientId: number,
+    userId: number,
+    roles: string[],
+  ): Promise<PatientClinicalHistoryResponse> {
+    const patient = await this.findAdminBasic(patientId, roles, userId);
 
     const toDateStr = (d: Date | string | null | undefined): string | null => {
       if (!d) return null;
