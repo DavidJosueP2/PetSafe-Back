@@ -5,8 +5,10 @@ export class MobileClientDemoData1777516989322 implements MigrationInterface {
         await queryRunner.query(`
             DO $$
             DECLARE
+                v_client_person_id INT;
                 v_client_user_id INT;
                 v_client_id INT;
+                v_client_role_id INT;
                 v_vet_id INT;
                 v_species_perro_id INT;
                 v_species_gato_id INT;
@@ -34,27 +36,94 @@ export class MobileClientDemoData1777516989322 implements MigrationInterface {
                 v_plan_2_id INT;
                 v_plan_3_id INT;
             BEGIN
-                SELECT u.id
-                INTO v_client_user_id
+                SELECT u.id, u.person_id
+                INTO v_client_user_id, v_client_person_id
                 FROM users u
-                WHERE LOWER(u.email) = LOWER('cliente@safepet.com')
+                WHERE LOWER(u.email) = LOWER('bjeferssonvinicio2005@gmail.com')
                     AND u.deleted_at IS NULL
                 LIMIT 1;
 
                 IF v_client_user_id IS NULL THEN
-                    RAISE EXCEPTION 'No se encontro el usuario cliente@safepet.com. Ejecuta primero las migraciones seed.';
+                    INSERT INTO persons (
+                        person_type,
+                        first_name,
+                        last_name,
+                        document_id,
+                        phone,
+                        address,
+                        gender,
+                        birth_date,
+                        is_active
+                    )
+                    SELECT
+                        'CLIENTE',
+                        'Joel',
+                        'Bonilla',
+                        '0000002005',
+                        '0992005000',
+                        'Quito, Ecuador',
+                        'M',
+                        DATE '2005-01-01',
+                        true
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM persons p
+                        WHERE p.document_id = '0000002005'
+                            AND p.deleted_at IS NULL
+                    )
+                    RETURNING id INTO v_client_person_id;
+
+                    IF v_client_person_id IS NULL THEN
+                        SELECT p.id
+                        INTO v_client_person_id
+                        FROM persons p
+                        WHERE p.document_id = '0000002005'
+                            AND p.deleted_at IS NULL
+                        LIMIT 1;
+                    END IF;
+
+                    INSERT INTO users (person_id, email, password_hash, is_active)
+                    VALUES (
+                        v_client_person_id,
+                        'bjeferssonvinicio2005@gmail.com',
+                        crypt('Cliente123!', gen_salt('bf', 10)),
+                        true
+                    )
+                    RETURNING id INTO v_client_user_id;
                 END IF;
 
                 SELECT c.id
                 INTO v_client_id
                 FROM clients c
-                INNER JOIN users u ON u.person_id = c.person_id
-                WHERE u.id = v_client_user_id
+                WHERE c.person_id = v_client_person_id
                     AND c.deleted_at IS NULL
                 LIMIT 1;
 
                 IF v_client_id IS NULL THEN
-                    RAISE EXCEPTION 'No se encontro el cliente asociado a cliente@safepet.com.';
+                    INSERT INTO clients (person_id, notes, is_active)
+                    VALUES (
+                        v_client_person_id,
+                        'Cliente demo para app movil y QR de mascotas',
+                        true
+                    )
+                    RETURNING id INTO v_client_id;
+                END IF;
+
+                SELECT id INTO v_client_role_id
+                FROM roles
+                WHERE name = 'CLIENTE_APP'
+                    AND deleted_at IS NULL
+                LIMIT 1;
+
+                IF v_client_role_id IS NOT NULL THEN
+                    INSERT INTO user_roles (user_id, role_id)
+                    SELECT v_client_user_id, v_client_role_id
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM user_roles ur
+                        WHERE ur.user_id = v_client_user_id
+                            AND ur.role_id = v_client_role_id
+                    );
                 END IF;
 
                 SELECT e.id
@@ -234,6 +303,10 @@ export class MobileClientDemoData1777516989322 implements MigrationInterface {
                 SELECT id INTO v_patient_1_id FROM patients WHERE code = 'DEMO-MOBILE-001' AND deleted_at IS NULL LIMIT 1;
                 SELECT id INTO v_patient_2_id FROM patients WHERE code = 'DEMO-MOBILE-002' AND deleted_at IS NULL LIMIT 1;
                 SELECT id INTO v_patient_3_id FROM patients WHERE code = 'DEMO-MOBILE-003' AND deleted_at IS NULL LIMIT 1;
+
+                DELETE FROM patient_tutors
+                WHERE patient_id IN (v_patient_1_id, v_patient_2_id, v_patient_3_id)
+                    AND client_id <> v_client_id;
 
                 INSERT INTO patient_tutors (patient_id, client_id, is_primary, relationship, is_active)
                 SELECT v_patient_1_id, v_client_id, true, 'Tutor demo app movil', true
@@ -1035,6 +1108,34 @@ export class MobileClientDemoData1777516989322 implements MigrationInterface {
         await queryRunner.query(`
             DELETE FROM patients
             WHERE code IN ('DEMO-MOBILE-001', 'DEMO-MOBILE-002', 'DEMO-MOBILE-003')
+        `);
+
+        await queryRunner.query(`
+            DELETE FROM user_roles
+            WHERE user_id IN (
+                SELECT id
+                FROM users
+                WHERE LOWER(email) = LOWER('bjeferssonvinicio2005@gmail.com')
+            )
+        `);
+
+        await queryRunner.query(`
+            DELETE FROM clients
+            WHERE person_id IN (
+                SELECT person_id
+                FROM users
+                WHERE LOWER(email) = LOWER('bjeferssonvinicio2005@gmail.com')
+            )
+        `);
+
+        await queryRunner.query(`
+            DELETE FROM users
+            WHERE LOWER(email) = LOWER('bjeferssonvinicio2005@gmail.com')
+        `);
+
+        await queryRunner.query(`
+            DELETE FROM persons
+            WHERE document_id = '0000002005'
         `);
     }
 }
